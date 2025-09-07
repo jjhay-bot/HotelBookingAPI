@@ -61,6 +61,45 @@ For data models, modern C# provides the `record` keyword.
 
 **Recommendation**: Prefer using `record` for simple data models.
 
+### Domain Models vs. DTOs (Data Transfer Objects)
+
+It's crucial to distinguish between your internal domain models and the data structures you use for API communication.
+
+- **Domain Model (e.g., `User.cs`)**:
+  - Represents the **internal, authoritative definition** of an entity within your application (e.g., how a user is stored in your database).
+  - Contains all properties relevant to your application's logic, including sensitive data like `PasswordHash`.
+
+- **DTO / Input Model (e.g., `RegisterRequest.cs`)**:
+  - Represents the **data contract for API requests or responses**.
+  - Contains only the data necessary for the specific API operation.
+  - For input DTOs, sensitive data like plain passwords are included (as they come from the client), but never `Id`s or hashed passwords (which are server-generated/managed).
+
+**Why both? (Separation of Concerns)**
+- **Security**: Prevents exposing internal/sensitive data (like `PasswordHash`) to clients.
+- **Flexibility**: Allows your API's input/output format to differ from your internal data storage.
+- **Clarity**: Clearly defines what data is expected for each API operation.
+- **Validation**: Enables specific validation rules for API requests.
+
+## Authentication (JWT)
+
+JSON Web Token (JWT) is a popular and robust method for securing modern APIs. Here's a high-level overview of the flow and implementation steps:
+
+### JWT Flow
+1.  **Login**: User sends credentials (username/password) to a `/login` endpoint.
+2.  **Token Issuance**: API validates credentials, generates a signed JWT, and sends it back to the client.
+3.  **Client Storage**: Client stores the JWT.
+4.  **Subsequent Requests**: Client sends the JWT in the `Authorization` header (as a "Bearer" token) with requests to protected endpoints.
+5.  **Token Validation**: API validates the JWT's signature and extracts user information.
+
+### Implementation Steps
+1.  **User Model & Service**: Define a `User` model (e.g., `User.cs` with `Username`, `PasswordHash`). Create a `UserService` for user management and password hashing.
+2.  **JWT Configuration**: Add necessary NuGet packages (e.g., `Microsoft.AspNetCore.Authentication.JwtBearer`). Define JWT settings (secret key, issuer, audience, expiration) in `appsettings.json`.
+3.  **Authentication Scheme**: Configure JWT Bearer authentication in `Program.cs`.
+4.  **Login Endpoint**: Create a new controller (e.g., `AuthController.cs`) with a `/login` endpoint that generates and returns a JWT upon successful login.
+5.  **Protect Endpoints**: Apply the `[Authorize]` attribute to controllers or action methods to require a valid JWT for access.
+
+**Important**: Always use HTTPS in production to protect tokens during transmission. Keep your JWT secret key absolutely confidential.
+
 ## Important Considerations
 
 - **RESTful Resource Naming**: A core principle of REST API design is to have simple, predictable, and consistent URLs. The convention is to model your URLs as "resources."
