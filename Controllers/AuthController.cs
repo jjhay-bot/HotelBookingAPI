@@ -32,7 +32,10 @@ public class AuthController : ControllerBase
         if (user == null)
         {
             // This could mean username already exists
-            return Conflict("Username already exists."); // HTTP 409 Conflict
+            return Conflict(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status409Conflict,
+                Message: "Username already exists."
+            )));
         }
 
         // For security, you might want to return a DTO that doesn't expose PasswordHash
@@ -47,12 +50,15 @@ public class AuthController : ControllerBase
 
         if (user == null)
         {
-            return Unauthorized("Invalid username or password."); // HTTP 401 Unauthorized
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: "Invalid username or password."
+            )));
         }
 
         // --- JWT Generation ---
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -64,8 +70,8 @@ public class AuthController : ControllerBase
             }),
             Expires = DateTime.UtcNow.AddDays(7), // Token valid for 7 days
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-            Issuer = _configuration["Jwt:Issuer"],
-            Audience = _configuration["Jwt:Audience"]
+            Issuer = _configuration["Jwt:Issuer"]!,
+            Audience = _configuration["Jwt:Audience"]!
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);

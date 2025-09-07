@@ -2,17 +2,47 @@ using HotelBookingAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using HotelBookingAPI.Models;
+using Microsoft.AspNetCore.Http; // Added for StatusCodes
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(ms => ms.Value!.Errors.Any()) // Added !
+                .Select(ms => new ErrorDetail(
+                    Field: ms.Key,
+                    Message: ms.Value!.Errors.First().ErrorMessage // Added !
+                ))
+                .ToList();
+
+            var errorInfo = new ErrorInfo(
+                Code: StatusCodes.Status400BadRequest,
+                Message: "One or more validation errors occurred.",
+                Details: errors
+            );
+
+            var errorResponse = new ErrorResponse(errorInfo);
+
+            return new BadRequestObjectResult(errorResponse)
+            {
+                ContentTypes = { "application/json" }
+            };
+        };
+    });
+
 builder.Services.AddSingleton<RoomService>();
 builder.Services.AddSingleton<UserService>();
 
 // Add JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]);
+var jwtSettings = builder.Configuration.GetSection("Jwt")!;
+var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -28,9 +58,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = jwtSettings["Issuer"]!, // Added !
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
+        ValidAudience = jwtSettings["Audience"]!, // Added !
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero // No leeway for token expiration
     };

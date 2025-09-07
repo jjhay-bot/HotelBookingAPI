@@ -2,6 +2,7 @@ using HotelBookingAPI.Models;
 using HotelBookingAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http; // New
 
 namespace HotelBookingAPI.Controllers;
 
@@ -40,10 +41,13 @@ public class RoomController : ControllerBase
 
         if (room == null)
         {
-            return NotFound(); // Returns HTTP 404 Not Found
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found."
+            )));
         }
 
-        return Ok(room); // Returns HTTP 200 OK with the room data
+        return Ok(room);
     }
 
     [HttpPatch("{id}")]
@@ -52,46 +56,55 @@ public class RoomController : ControllerBase
         var existingRoom = _roomService.GetById(id);
         if (existingRoom == null)
         {
-            return NotFound();
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found."
+            )));
         }
 
-        // Ensure the ID from the URL matches the ID in the body (if provided)
-        // This is a common validation step for PUT/PATCH
         if (updatedRoom.Id != 0 && updatedRoom.Id != id)
         {
-            return BadRequest("Room ID not found.");
+            return BadRequest(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status400BadRequest,
+                Message:$"Room with ID {id} not found."
+            )));
         }
 
-        // Update the room using the service
         var result = _roomService.Update(id, updatedRoom);
 
         if (result == null)
         {
-            // This case should ideally not happen if existingRoom was found,
-            // but good for robustness.
-            return NotFound();
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found."
+            )));
         }
 
-        return NoContent(); // Returns HTTP 204 No Content
+        return NoContent();
     }
 
     [HttpPut("{id}")]
     public IActionResult Replace(int id, Room newRoom)
     {
-        // Validate that the ID in the URL matches the ID in the body
         if (id != newRoom.Id)
         {
-            return BadRequest("Room ID not found.");
+            return BadRequest(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status400BadRequest,
+                Message: $"Room with ID {id} not found."
+            )));
         }
 
         var result = _roomService.Replace(id, newRoom);
 
         if (result == null)
         {
-            return NotFound(); // Returns HTTP 404 Not Found
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found for replacement."
+            )));
         }
 
-        return NoContent(); // Returns HTTP 204 No Content
+        return NoContent();
     }
 
     [HttpDelete("{id}")]
@@ -101,9 +114,12 @@ public class RoomController : ControllerBase
 
         if (!deleted)
         {
-            return NotFound(); // Returns HTTP 404 Not Found
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found for deletion."
+            )));
         }
 
-        return NoContent(); // Returns HTTP 204 No Content
+        return NoContent();
     }
 }
