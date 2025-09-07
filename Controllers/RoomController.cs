@@ -55,7 +55,7 @@ public class RoomController : ControllerBase
         // This is a common validation step for PUT/PATCH
         if (updatedRoom.Id != 0 && updatedRoom.Id != id)
         {
-            return BadRequest("ID in URL does not match ID in body.");
+            return BadRequest("Room ID not found.");
         }
 
         // Update the room using the service
@@ -65,7 +65,26 @@ public class RoomController : ControllerBase
         {
             // This case should ideally not happen if existingRoom was found,
             // but good for robustness.
-            return NotFound(); 
+            return NotFound();
+        }
+
+        return NoContent(); // Returns HTTP 204 No Content
+    }
+
+    [HttpPut("{id}")]
+    public IActionResult Replace(int id, Room newRoom)
+    {
+        // Validate that the ID in the URL matches the ID in the body
+        if (id != newRoom.Id)
+        {
+            return BadRequest("Room ID not found.");
+        }
+
+        var result = _roomService.Replace(id, newRoom);
+
+        if (result == null)
+        {
+            return NotFound(); // Returns HTTP 404 Not Found
         }
 
         return NoContent(); // Returns HTTP 204 No Content

@@ -43,4 +43,18 @@ public class RoomService
 
         return existingRoom;
     }
+
+    public Room? Replace(int id, Room newRoom)
+    {
+        var index = Rooms.FindIndex(r => r.Id == id);
+        if (index == -1)
+        {
+            return null; // Room not found
+        }
+
+        newRoom.Id = id;
+        Rooms[index] = newRoom; // Replace the room at the found index
+
+        return newRoom;
+    }
 }
