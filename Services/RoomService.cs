@@ -18,4 +18,9 @@ public class RoomService
     {
         return Rooms;
     }
+
+    public Room? GetById(int id)
+    {
+        return Rooms.FirstOrDefault(r => r.Id == id);
+    }
 }

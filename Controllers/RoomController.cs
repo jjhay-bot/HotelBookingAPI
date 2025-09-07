@@ -28,4 +28,17 @@ public class RoomController : ControllerBase
         var rooms = _roomService.GetAllRooms();
         return Ok(rooms);
     }
+
+    [HttpGet("{id}")]
+    public ActionResult<Room> GetById(int id)
+    {
+        var room = _roomService.GetById(id);
+
+        if (room == null)
+        {
+            return NotFound(); // Returns HTTP 404 Not Found
+        }
+
+        return Ok(room); // Returns HTTP 200 OK with the room data
+    }
 }
