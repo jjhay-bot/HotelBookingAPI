@@ -98,6 +98,21 @@ JSON Web Token (JWT) is a popular and robust method for securing modern APIs. He
 4.  **Login Endpoint**: Create a new controller (e.g., `AuthController.cs`) with a `/login` endpoint that generates and returns a JWT upon successful login.
 5.  **Protect Endpoints**: Apply the `[Authorize]` attribute to controllers or action methods to require a valid JWT for access.
 
+### Controlling Access with `[Authorize]` and `[AllowAnonymous]`
+
+These attributes are used to define which parts of your API require authentication and which are publicly accessible.
+
+- **`[Authorize]`**
+  - **Purpose**: Requires that the user making the request is authenticated (i.e., has a valid token).
+  - **Placement**: Can be applied at the **controller level** (protects all action methods within that controller) or at the **individual action method level**.
+  - **Example**: `[Authorize]` on `RoomController` means all `Room` operations (Create, Update, Delete) require a token.
+
+- **`[AllowAnonymous]`**
+  - **Purpose**: Overrides `[Authorize]` to explicitly allow unauthenticated access.
+  - **Placement**: Applied to **individual action methods**.
+  - **Example**: If `RoomController` is `[Authorize]`, adding `[AllowAnonymous]` to `GetAll()` and `GetById()` methods makes them publicly viewable without a token.
+  - **Common Use**: Used on `Register` and `Login` endpoints in `AuthController` so users can get a token in the first place.
+
 **Important**: Always use HTTPS in production to protect tokens during transmission. Keep your JWT secret key absolutely confidential.
 
 ## Important Considerations

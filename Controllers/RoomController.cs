@@ -25,6 +25,7 @@ public class RoomController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous] // <-- Add this line
     public ActionResult<IEnumerable<Room>> GetAll()
     {
         var rooms = _roomService.GetAllRooms();
@@ -32,6 +33,7 @@ public class RoomController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous] // <-- Add this line
     public ActionResult<Room> GetById(int id)
     {
         var room = _roomService.GetById(id);
