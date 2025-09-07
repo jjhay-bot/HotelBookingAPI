@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HotelBookingAPI.Controllers;
 
@@ -23,6 +24,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")] // This will make the full route /api/Auth/register
+    [AllowAnonymous] // <-- Add this line
     public ActionResult<User> Register(RegisterRequest request)
     {
         var user = _userService.Register(request.Username, request.Password);
@@ -38,6 +40,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")] // This will make the full route /api/Auth/login
+    [AllowAnonymous] // <-- Add this line
     public IActionResult Login(LoginRequest request)
     {
         var user = _userService.Authenticate(request.Username, request.Password);
