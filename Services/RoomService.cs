@@ -13,4 +13,9 @@ public class RoomService
         Rooms.Add(room);
         return room;
     }
+
+    public IEnumerable<Room> GetAllRooms()
+    {
+        return Rooms;
+    }
 }

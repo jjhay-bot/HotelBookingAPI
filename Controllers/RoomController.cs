@@ -21,4 +21,11 @@ public class RoomController : ControllerBase
         var newRoom = _roomService.CreateRoom(room);
         return CreatedAtAction(nameof(Create), new { id = newRoom.Id }, newRoom);
     }
+
+    [HttpGet]
+    public ActionResult<IEnumerable<Room>> GetAll()
+    {
+        var rooms = _roomService.GetAllRooms();
+        return Ok(rooms);
+    }
 }
