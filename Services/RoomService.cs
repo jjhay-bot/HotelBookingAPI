@@ -23,18 +23,23 @@ public class RoomService
     {
         return Rooms.FirstOrDefault(r => r.Id == id);
     }
-
     public Room? Update(int id, Room updatedRoom)
     {
         var existingRoom = GetById(id);
         if (existingRoom == null)
         {
-            return null; // Room not found
+            return null;
         }
 
-        // Update properties
-        existingRoom.Name = updatedRoom.Name;
-        existingRoom.Capacity = updatedRoom.Capacity;
+        if (updatedRoom.Name != null)
+        {
+            existingRoom.Name = updatedRoom.Name;
+        }
+
+        if (updatedRoom.Capacity > 0)
+        {
+            existingRoom.Capacity = updatedRoom.Capacity;
+        }
 
         return existingRoom;
     }
