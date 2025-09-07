@@ -41,4 +41,33 @@ public class RoomController : ControllerBase
 
         return Ok(room); // Returns HTTP 200 OK with the room data
     }
+
+    [HttpPatch("{id}")]
+    public IActionResult Update(int id, Room updatedRoom)
+    {
+        var existingRoom = _roomService.GetById(id);
+        if (existingRoom == null)
+        {
+            return NotFound();
+        }
+
+        // Ensure the ID from the URL matches the ID in the body (if provided)
+        // This is a common validation step for PUT/PATCH
+        if (updatedRoom.Id != 0 && updatedRoom.Id != id)
+        {
+            return BadRequest("ID in URL does not match ID in body.");
+        }
+
+        // Update the room using the service
+        var result = _roomService.Update(id, updatedRoom);
+
+        if (result == null)
+        {
+            // This case should ideally not happen if existingRoom was found,
+            // but good for robustness.
+            return NotFound(); 
+        }
+
+        return NoContent(); // Returns HTTP 204 No Content
+    }
 }
