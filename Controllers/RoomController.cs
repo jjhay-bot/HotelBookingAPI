@@ -89,4 +89,17 @@ public class RoomController : ControllerBase
 
         return NoContent(); // Returns HTTP 204 No Content
     }
+
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        var deleted = _roomService.Delete(id);
+
+        if (!deleted)
+        {
+            return NotFound(); // Returns HTTP 404 Not Found
+        }
+
+        return NoContent(); // Returns HTTP 204 No Content
+    }
 }

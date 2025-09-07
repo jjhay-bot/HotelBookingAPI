@@ -57,4 +57,16 @@ public class RoomService
 
         return newRoom;
     }
+
+    public bool Delete(int id)
+    {
+        var roomToRemove = GetById(id);
+        if (roomToRemove == null)
+        {
+            return false; // Room not found
+        }
+
+        Rooms.Remove(roomToRemove);
+        return true; // Room successfully deleted
+    }
 }
