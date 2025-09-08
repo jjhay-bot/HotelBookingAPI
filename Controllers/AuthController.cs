@@ -25,9 +25,9 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")] // This will make the full route /api/Auth/register
     [AllowAnonymous] // <-- Add this line
-    public ActionResult<User> Register(RegisterRequest request)
+    public async Task<ActionResult<User>> Register(RegisterRequest request)
     {
-        var user = _userService.Register(request.Username, request.Password);
+        var user = await _userService.RegisterAsync(request.Username, request.Password);
 
         if (user == null)
         {
@@ -44,9 +44,9 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")] // This will make the full route /api/Auth/login
     [AllowAnonymous] // <-- Add this line
-    public IActionResult Login(LoginRequest request)
+    public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = _userService.Authenticate(request.Username, request.Password);
+        var user = await _userService.AuthenticateAsync(request.Username, request.Password);
 
         if (user == null)
         {
@@ -65,7 +65,7 @@ public class AuthController : ControllerBase
             Subject = new ClaimsIdentity(new Claim[]
             {
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                new Claim(ClaimTypes.NameIdentifier, user.Id ?? string.Empty)
                 // Add other claims like roles here if needed
             }),
             Expires = DateTime.UtcNow.AddDays(7), // Token valid for 7 days
