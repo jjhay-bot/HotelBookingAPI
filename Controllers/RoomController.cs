@@ -2,13 +2,13 @@ using HotelBookingAPI.Models;
 using HotelBookingAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http; // New
+using Microsoft.AspNetCore.Http;
 
 namespace HotelBookingAPI.Controllers;
 
 [ApiController]
 [Route("api/rooms")]
-[Authorize]
+// [Authorize]
 public class RoomController : ControllerBase
 {
     private readonly RoomService _roomService;
@@ -18,43 +18,42 @@ public class RoomController : ControllerBase
         _roomService = roomService;
     }
 
-    [HttpPost]
-    public ActionResult<Room> Create(Room room)
-    {
-        var newRoom = _roomService.CreateRoom(room);
-        return CreatedAtAction(nameof(Create), new { id = newRoom.Id }, newRoom);
-    }
-
     [HttpGet]
-    [AllowAnonymous] // <-- Add this line
-    public ActionResult<IEnumerable<Room>> GetAll()
+    [AllowAnonymous]
+    public async Task<List<Room>> Get() =>
+        await _roomService.GetAsync();
+
+    [HttpGet("{id:length(24)}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<Room>> Get(string id)
     {
-        var rooms = _roomService.GetAllRooms();
-        return Ok(rooms);
+        var room = await _roomService.GetAsync(id);
+
+        if (room is null)
+        {
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found."
+            )));
+        }
+
+        return room;
     }
 
-    [HttpGet("{id}")]
-    [AllowAnonymous] // <-- Add this line
-    public ActionResult<Room> GetById(int id)
+    [HttpPost]
+    public async Task<IActionResult> Post(Room newRoom)
     {
-        var room = _roomService.GetById(id);
+        await _roomService.CreateAsync(newRoom);
 
-        if (room == null)
-        {
-            return NotFound(new ErrorResponse(new ErrorInfo(
-                Code: StatusCodes.Status404NotFound,
-                Message: $"Room with ID {id} not found."
-            )));
-        }
-
-        return Ok(room);
+        return CreatedAtAction(nameof(Get), new { id = newRoom.Id }, newRoom);
     }
 
-    [HttpPatch("{id}")]
-    public IActionResult Update(int id, Room updatedRoom)
+    [HttpPut("{id:length(24)}")]
+    public async Task<IActionResult> Update(string id, Room updatedRoom)
     {
-        var existingRoom = _roomService.GetById(id);
-        if (existingRoom == null)
+        var room = await _roomService.GetAsync(id);
+
+        if (room is null)
         {
             return NotFound(new ErrorResponse(new ErrorInfo(
                 Code: StatusCodes.Status404NotFound,
@@ -62,55 +61,27 @@ public class RoomController : ControllerBase
             )));
         }
 
-        if (updatedRoom.Id != 0 && updatedRoom.Id != id)
-        {
-            return BadRequest(new ErrorResponse(new ErrorInfo(
-                Code: StatusCodes.Status400BadRequest,
-                Message:$"Room with ID {id} not found."
-            )));
-        }
+        updatedRoom.Id = room.Id;
 
-        var result = _roomService.Update(id, updatedRoom);
-
-        if (result == null)
-        {
-            return NotFound(new ErrorResponse(new ErrorInfo(
-                Code: StatusCodes.Status404NotFound,
-                Message: $"Room with ID {id} not found."
-            )));
-        }
+        await _roomService.UpdateAsync(id, updatedRoom);
 
         return NoContent();
     }
 
-    [HttpPut("{id}")]
-    public IActionResult Replace(int id, Room newRoom)
+    [HttpDelete("{id:length(24)}")]
+    public async Task<IActionResult> Delete(string id)
     {
-        var result = _roomService.Replace(id, newRoom);
+        var room = await _roomService.GetAsync(id);
 
-        if (result == null)
+        if (room is null)
         {
             return NotFound(new ErrorResponse(new ErrorInfo(
                 Code: StatusCodes.Status404NotFound,
-                Message: $"Room with ID {id} not found for replacement."
+                Message: $"Room with ID {id} not found."
             )));
         }
 
-        return NoContent();
-    }
-
-    [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
-    {
-        var deleted = _roomService.Delete(id);
-
-        if (!deleted)
-        {
-            return NotFound(new ErrorResponse(new ErrorInfo(
-                Code: StatusCodes.Status404NotFound,
-                Message: $"Room with ID {id} not found for deletion."
-            )));
-        }
+        await _roomService.RemoveAsync(id);
 
         return NoContent();
     }

@@ -1,72 +1,31 @@
 using HotelBookingAPI.Models;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 
 namespace HotelBookingAPI.Services;
 
 public class RoomService
 {
-    private static readonly List<Room> Rooms = new List<Room>();
-    private static int _nextId = 1;
+    private readonly IMongoCollection<Room> _roomsCollection;
 
-    public Room CreateRoom(Room room)
+    public RoomService(IMongoClient mongoClient, IOptions<MongoDbSettings> mongoDbSettings)
     {
-        room.Id = _nextId++;
-        Rooms.Add(room);
-        return room;
+        var mongoDatabase = mongoClient.GetDatabase(mongoDbSettings.Value.DatabaseName);
+        _roomsCollection = mongoDatabase.GetCollection<Room>(mongoDbSettings.Value.RoomsCollectionName);
     }
 
-    public IEnumerable<Room> GetAllRooms()
-    {
-        return Rooms;
-    }
+    public async Task<List<Room>> GetAsync() =>
+        await _roomsCollection.Find(_ => true).ToListAsync();
 
-    public Room? GetById(int id)
-    {
-        return Rooms.FirstOrDefault(r => r.Id == id);
-    }
-    public Room? Update(int id, Room updatedRoom)
-    {
-        var existingRoom = GetById(id);
-        if (existingRoom == null)
-        {
-            return null;
-        }
+    public async Task<Room?> GetAsync(string id) =>
+        await _roomsCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
-        if (updatedRoom.Name != null)
-        {
-            existingRoom.Name = updatedRoom.Name;
-        }
+    public async Task CreateAsync(Room newRoom) =>
+        await _roomsCollection.InsertOneAsync(newRoom);
 
-        if (updatedRoom.Capacity > 0)
-        {
-            existingRoom.Capacity = updatedRoom.Capacity;
-        }
+    public async Task UpdateAsync(string id, Room updatedRoom) =>
+        await _roomsCollection.ReplaceOneAsync(x => x.Id == id, updatedRoom);
 
-        return existingRoom;
-    }
-
-    public Room? Replace(int id, Room newRoom)
-    {
-        var index = Rooms.FindIndex(r => r.Id == id);
-        if (index == -1)
-        {
-            return null; // Room not found
-        }
-
-        newRoom.Id = id;
-        Rooms[index] = newRoom; // Replace the room at the found index
-
-        return newRoom;
-    }
-
-    public bool Delete(int id)
-    {
-        var roomToRemove = GetById(id);
-        if (roomToRemove == null)
-        {
-            return false; // Room not found
-        }
-
-        Rooms.Remove(roomToRemove);
-        return true; // Room successfully deleted
-    }
+    public async Task RemoveAsync(string id) =>
+        await _roomsCollection.DeleteOneAsync(x => x.Id == id);
 }

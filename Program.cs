@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using HotelBookingAPI.Models;
 using Microsoft.AspNetCore.Http; // Added for StatusCodes
+using MongoDB.Driver;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +41,18 @@ builder.Services.AddControllers()
 
 builder.Services.AddSingleton<RoomService>();
 builder.Services.AddSingleton<UserService>();
+
+// Configure and register MongoDbSettings
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDbSettings")
+);
+
+builder.Services.AddSingleton<IMongoClient>(serviceProvider => 
+{
+    var settings = serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value;
+    return new MongoClient(settings.ConnectionString);
+});
+
 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt")!;

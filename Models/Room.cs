@@ -1,14 +1,18 @@
-// IMPORT NAME
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace HotelBookingAPI.Models;
 
-// MODERN WAY
-// public record Room(int Id, string? Name, int Capacity);
-
-// TRADITIONAL WAY
 public class Room
 {
-    public int Id { get; set; }
-    public string? Name { get; set; }
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = null!;
+
+    [BsonElement("name")]
+    public string Name { get; set; } = null!;
+
+    [BsonElement("capacity")]
     public int Capacity { get; set; }
 }
 
