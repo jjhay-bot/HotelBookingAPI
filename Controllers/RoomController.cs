@@ -41,7 +41,6 @@ public class RoomController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous] // Temporarily added for testing
     public async Task<IActionResult> Post(Room newRoom)
     {
         await _roomService.CreateAsync(newRoom);
