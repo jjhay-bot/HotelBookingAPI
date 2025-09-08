@@ -86,14 +86,6 @@ public class RoomController : ControllerBase
     [HttpPut("{id}")]
     public IActionResult Replace(int id, Room newRoom)
     {
-        if (id != newRoom.Id)
-        {
-            return BadRequest(new ErrorResponse(new ErrorInfo(
-                Code: StatusCodes.Status400BadRequest,
-                Message: $"Room with ID {id} not found."
-            )));
-        }
-
         var result = _roomService.Replace(id, newRoom);
 
         if (result == null)
