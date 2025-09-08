@@ -8,7 +8,7 @@ namespace HotelBookingAPI.Controllers;
 
 [ApiController]
 [Route("api/rooms")]
-// [Authorize]
+[Authorize]
 public class RoomController : ControllerBase
 {
     private readonly RoomService _roomService;
@@ -41,6 +41,7 @@ public class RoomController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous] // Temporarily added for testing
     public async Task<IActionResult> Post(Room newRoom)
     {
         await _roomService.CreateAsync(newRoom);
@@ -61,9 +62,37 @@ public class RoomController : ControllerBase
             )));
         }
 
-        updatedRoom.Id = room.Id;
+        updatedRoom.Id = id; // Ensure the ID is set correctly
 
         await _roomService.UpdateAsync(id, updatedRoom);
+
+        return NoContent();
+    }
+
+    [HttpPatch("{id:length(24)}")]
+    public async Task<IActionResult> PartialUpdate(string id, Room partialRoom)
+    {
+        var existingRoom = await _roomService.GetAsync(id);
+
+        if (existingRoom is null)
+        {
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"Room with ID {id} not found."
+            )));
+        }
+
+        // Only update non-null/non-default properties
+        if (!string.IsNullOrEmpty(partialRoom.Name))
+            existingRoom.Name = partialRoom.Name;
+        
+        if (partialRoom.Capacity > 0)
+            existingRoom.Capacity = partialRoom.Capacity;
+
+        // Ensure the ID doesn't get changed
+        existingRoom.Id = id;
+
+        await _roomService.UpdateAsync(id, existingRoom);
 
         return NoContent();
     }

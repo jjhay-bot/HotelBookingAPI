@@ -61,6 +61,67 @@ For data models, modern C# provides the `record` keyword.
 
 **Recommendation**: Prefer using `record` for simple data models.
 
+## MongoDB Model Configuration
+
+When working with MongoDB in .NET, you need to configure your models with specific attributes to control how data is stored and retrieved from the database.
+
+### Essential MongoDB Attributes
+
+**`[BsonId]`**: Marks the property as the primary key (document ID) in MongoDB.
+
+**`[BsonRepresentation(BsonType.ObjectId)]`**: Tells MongoDB to treat a string property as an ObjectId, enabling automatic ID generation.
+
+**`[BsonElement("fieldName")]`**: Maps a C# property to a specific field name in the MongoDB document.
+
+**`[BsonIgnore]`**: Excludes a property from being saved to or loaded from MongoDB.
+
+### Example MongoDB Model
+
+```csharp
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+public class Room
+{
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? Id { get; set; }  // Nullable to allow MongoDB auto-generation
+
+    [BsonElement("name")]
+    public string Name { get; set; } = null!;
+
+    [BsonElement("capacity")]
+    public int Capacity { get; set; }
+
+    [BsonElement("price")]
+    public decimal Price { get; set; }
+
+    [BsonElement("isAvailable")]
+    public bool IsAvailable { get; set; } = true;
+
+    [BsonElement("amenities")]
+    public List<string> Amenities { get; set; } = new();
+
+    [BsonElement("createdAt")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonIgnore]  // Not saved to database
+    public string DisplayName => $"{Name} (Capacity: {Capacity})";
+}
+```
+
+### Key Considerations for MongoDB Models
+
+- **Nullable ID**: Make the `Id` property nullable (`string?`) to allow MongoDB to auto-generate ObjectIds during creation.
+- **Field Naming**: Use `[BsonElement]` to map C# properties to consistent database field names (typically camelCase).
+- **Default Values**: Set appropriate default values for properties like `IsAvailable = true` or `CreatedAt = DateTime.UtcNow`.
+- **Collections**: Use `List<T>` for arrays in MongoDB documents.
+- **Computed Properties**: Use `[BsonIgnore]` for properties that are calculated and shouldn't be stored.
+
+### Common Validation Errors and Solutions
+
+**"The Id field is required" Error**: This occurs when the `Id` property is non-nullable during POST requests. Solution: Make `Id` nullable (`string? Id`) to allow MongoDB auto-generation.
+
 ### Domain Models vs. DTOs (Data Transfer Objects)
 
 It's crucial to distinguish between your internal domain models and the data structures you use for API communication.
