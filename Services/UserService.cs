@@ -1,4 +1,5 @@
 using HotelBookingAPI.Models;
+using HotelBookingAPI.Security;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Collections.Generic;
@@ -14,19 +15,6 @@ public class UserService
     {
         var mongoDatabase = mongoClient.GetDatabase(mongoDbSettings.Value.DatabaseName);
         _usersCollection = mongoDatabase.GetCollection<User>(mongoDbSettings.Value.UsersCollectionName);
-    }
-
-    // Placeholder for password hashing. In a real app, use a strong library like BCrypt.NET
-    private string HashPassword(string password)
-    {
-        // For demonstration, a very simple "hash"
-        return password + "_hashed"; 
-    }
-
-    // Placeholder for password verification
-    private bool VerifyPassword(string password, string hashedPassword)
-    {
-        return HashPassword(password) == hashedPassword;
     }
 
     // MongoDB CRUD Operations
@@ -51,6 +39,18 @@ public class UserService
     // Authentication methods
     public async Task<User?> RegisterAsync(string username, string password)
     {
+        // Input validation
+        if (!InputValidator.IsValidUsername(username))
+        {
+            return null; // Invalid username format
+        }
+
+        var passwordValidation = InputValidator.ValidatePassword(password);
+        if (passwordValidation != System.ComponentModel.DataAnnotations.ValidationResult.Success)
+        {
+            return null; // Invalid password
+        }
+
         var existingUser = await GetByUsernameAsync(username);
         if (existingUser != null)
         {
@@ -60,7 +60,7 @@ public class UserService
         var newUser = new User
         {
             Username = username,
-            PasswordHash = HashPassword(password)
+            PasswordHash = PasswordHasher.HashPassword(password)
         };
 
         await CreateAsync(newUser);
@@ -69,13 +69,19 @@ public class UserService
 
     public async Task<User?> AuthenticateAsync(string username, string password)
     {
+        // Input validation
+        if (!InputValidator.IsValidUsername(username))
+        {
+            return null; // Invalid username format
+        }
+
         var user = await GetByUsernameAsync(username);
         if (user == null)
         {
             return null; // User not found
         }
 
-        if (!VerifyPassword(password, user.PasswordHash))
+        if (!PasswordHasher.VerifyPassword(password, user.PasswordHash))
         {
             return null; // Password incorrect
         }

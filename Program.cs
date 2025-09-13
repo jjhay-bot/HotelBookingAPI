@@ -1,4 +1,6 @@
 using HotelBookingAPI.Services;
+using HotelBookingAPI.Security;
+using HotelBookingAPI.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -44,6 +46,9 @@ builder.Services.AddControllers()
 
 builder.Services.AddSingleton<RoomService>();
 builder.Services.AddSingleton<UserService>();
+
+// Add security services
+builder.Services.AddSecurityServices(builder.Configuration);
 
 // Configure and register MongoDbSettings
 builder.Services.Configure<MongoDbSettings>(
@@ -96,7 +101,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Add security middleware
+app.UseSecurityMiddleware();
+app.UseSecurityHeaders();
 
 app.UseAuthentication(); // Must be before UseAuthorization
 app.UseAuthorization();  // Must be after UseAuthentication
