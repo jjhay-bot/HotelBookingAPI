@@ -1,0 +1,42 @@
+### Cache Memory Test - See Actual Usage
+
+POST https://localhost:7070/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "test_user_1000",
+  "email": "test1000@example.com", 
+  "password": "Test123!@#"
+}
+
+###
+
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test_user_1000",
+  "password": "Test123!@#"
+}
+
+###
+
+# Make multiple requests to trigger caching
+GET https://localhost:7070/api/user/profile
+Authorization: Bearer {{login_response.token}}
+
+###
+
+GET https://localhost:7070/api/user/profile  
+Authorization: Bearer {{login_response.token}}
+
+###
+
+GET https://localhost:7070/api/user/profile
+Authorization: Bearer {{login_response.token}}
+
+###
+
+# Check if cache is working (should be faster after first request)
+# Monitor server memory in Task Manager/Activity Monitor
+# Memory increase should be minimal (few KB per user)

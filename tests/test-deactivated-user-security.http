@@ -1,0 +1,92 @@
+### Deactivated User Token Security Test
+# This test demonstrates what happens when a user has a valid token but gets deactivated
+
+@baseUrl = http://localhost:5268
+@api = {{baseUrl}}/api
+
+### 1. Register a test user that will be deactivated
+POST {{api}}/Auth/register
+Content-Type: application/json
+
+{
+  "username": "user_to_deactivate",
+  "password": "TestPass123!"
+}
+
+### 2. Login as the test user to get a valid token
+POST {{api}}/Auth/login
+Content-Type: application/json
+
+{
+  "username": "user_to_deactivate",
+  "password": "TestPass123!"
+}
+
+### 3. Login as admin to get admin token
+POST {{api}}/Auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "AdminPass123!"
+}
+
+### 4. Test that user can access protected endpoints with valid token
+# Replace {{userToken}} with token from step 2
+# Replace {{userId}} with user ID from step 1 response
+GET {{api}}/users/{{userId}}
+Authorization: Bearer {{userToken}}
+
+### 5. Admin deactivates the user (while user has valid token!)
+# Replace {{adminToken}} with token from step 3
+# Replace {{userId}} with user ID from step 1
+PUT {{api}}/users/{{userId}}/deactivate
+Authorization: Bearer {{adminToken}}
+
+### 6. Try to login as deactivated user (should fail with 401)
+POST {{api}}/Auth/login
+Content-Type: application/json
+
+{
+  "username": "user_to_deactivate",
+  "password": "TestPass123!"
+}
+
+### 7. **SECURITY TEST**: Try to use old token after deactivation
+# This should now FAIL with 401 "Account is deactivated"
+# Before our fix: This would SUCCEED (security vulnerability)
+# After our fix: This will FAIL (secure behavior)
+GET {{api}}/users/{{userId}}
+Authorization: Bearer {{userToken}}
+
+### 8. Try to access any other protected endpoint with old token
+# This should also fail
+GET {{api}}/users
+Authorization: Bearer {{userToken}}
+
+### 9. Try to perform admin action with old token (role validation)
+# This should fail for multiple reasons
+PUT {{api}}/users/{{userId}}/role
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "role": 1
+}
+
+### Expected Results:
+# Step 1-2: 200/201 - User registration and login successful
+# Step 3: 200 - Admin login successful  
+# Step 4: 200 - User can access protected resource with valid token
+# Step 5: 204 - Admin successfully deactivates user
+# Step 6: 401 - "Account is deactivated" (login blocked)
+# Step 7: 401 - "Account is deactivated" (OLD TOKEN BLOCKED!) ✅ SECURITY FIX
+# Step 8: 401 - "Account is deactivated" (all endpoints blocked)
+# Step 9: 401 - "Account is deactivated" (admin actions blocked)
+
+### Security Benefits:
+# ✅ Immediate token invalidation when user is deactivated
+# ✅ No 24-hour vulnerability window
+# ✅ Real-time user status validation
+# ✅ Protection against admin mistakes (accidental token exposure)
+# ✅ Audit logging of deactivated user access attempts
