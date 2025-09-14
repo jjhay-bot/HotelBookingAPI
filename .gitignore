@@ -32,3 +32,5 @@ appsettings.Development.json
 
 # Environment variables script (contains secrets)
 set-env.sh
+
+.env

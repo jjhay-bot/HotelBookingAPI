@@ -1,0 +1,20 @@
+# Render.com Deployment Configuration
+# This file is automatically detected by Render
+
+buildCommand: dotnet publish -c Release -o out
+startCommand: dotnet out/HotelBookingAPI.dll
+
+# Environment settings
+envs:
+  - key: ASPNETCORE_ENVIRONMENT
+    value: Production
+  - key: PORT
+    value: 10000
+  - key: ASPNETCORE_URLS
+    value: http://0.0.0.0:10000
+
+# Health check endpoint
+healthCheckPath: /health
+
+# Auto-deploy on git push
+autoDeploy: true

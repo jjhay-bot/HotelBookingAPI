@@ -6,6 +6,23 @@ using System.Threading.Tasks;
 namespace HotelBookingAPI.Controllers
 {
     [ApiController]
+    [Route("[controller]")]
+    public class HealthController : ControllerBase
+    {
+        [HttpGet]
+        public IActionResult Get()
+        {
+            return Ok(new
+            {
+                status = "healthy",
+                timestamp = DateTime.UtcNow,
+                version = "1.0.0",
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+            });
+        }
+    }
+
+    [ApiController]
     [Route("api/health")]
     public class HealthCheckController : ControllerBase
     {
