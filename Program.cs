@@ -55,6 +55,7 @@ builder.Services.AddControllers()
 builder.Services.AddScoped<RoomService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 
 // Add Memory Cache for server-side caching
 builder.Services.AddMemoryCache();

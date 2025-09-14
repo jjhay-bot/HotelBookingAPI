@@ -18,6 +18,8 @@ public static class PasswordHasher
     /// </summary>
     /// <param name="password">The password to hash</param>
     /// <returns>A base64 encoded string containing salt and hash</returns>
+
+    // [🔒] 
     public static string HashPassword(string password)
     {
         if (string.IsNullOrEmpty(password))
@@ -47,6 +49,7 @@ public static class PasswordHasher
     /// <param name="password">The password to verify</param>
     /// <param name="hashedPassword">The stored hash to verify against</param>
     /// <returns>True if password matches, false otherwise</returns>
+    // [🔒]
     public static bool VerifyPassword(string password, string hashedPassword)
     {
         if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hashedPassword))

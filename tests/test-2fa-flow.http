@@ -1,0 +1,118 @@
+### 2FA Testing Flow
+### This file demonstrates the complete 2FA setup and login process
+
+@baseUrl = http://localhost:8080
+# @baseUrl = https://localhost:7070
+@username = testuser2fa
+@password = TestPass123!
+@email = test2fa@example.com
+
+### Step 1: Register a new user
+POST {{baseUrl}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Step 2: Login to get JWT token (save this token)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+# Copy the token from above response and paste it below
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+### Step 3: Setup 2FA (this generates QR code and secret key)
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+### Step 4: Check 2FA status (should show isEnabled: false)
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer {{jwtToken}}
+
+### Step 5: Enable 2FA (use code from authenticator app)
+# Install Google Authenticator or Authy on your phone
+# Scan the QR code from Step 3 response
+# Enter the 6-digit code from your authenticator app
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
+
+### Step 6: Check 2FA status again (should show isEnabled: true)
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer {{jwtToken}}
+
+### Step 7: Test login with 2FA disabled user (should work normally)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Step 8: After enabling 2FA, login will require 2FA
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+# This should return: requiresTwoFactor: true and a twoFactorToken
+# Copy the twoFactorToken from response
+@twoFactorToken = temp_token_from_above_response
+
+### Step 9: Complete 2FA login
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "twoFactorCode": "123456",
+  "isRecoveryCode": false,
+  "twoFactorToken": "{{twoFactorToken}}"
+}
+
+### Step 10: Test with recovery code (first get recovery codes)
+POST {{baseUrl}}/api/2fa/recovery-codes/regenerate
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+### Step 11: Login with recovery code
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "twoFactorCode": "ABCD1234",
+  "isRecoveryCode": true,
+  "twoFactorToken": "{{twoFactorToken}}"
+}
+
+### Step 12: Disable 2FA
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}

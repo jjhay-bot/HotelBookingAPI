@@ -25,6 +25,24 @@ public class User
 
     [BsonElement("isActive")]
     public bool IsActive { get; set; } = true;
+
+    // Two-Factor Authentication properties (email optional)
+    [BsonElement("email")]
+    public string? Email { get; set; }
+
+    [BsonElement("isTwoFactorEnabled")]
+    public bool IsTwoFactorEnabled { get; set; } = false;
+
+    [BsonElement("twoFactorSecret")]
+    [JsonIgnore] // Don't expose secret in API responses
+    public string? TwoFactorSecret { get; set; }
+
+    [BsonElement("recoveryCodes")]
+    [JsonIgnore] // Don't expose recovery codes in API responses
+    public List<string> RecoveryCodes { get; set; } = new();
+
+    [BsonElement("lastTwoFactorUsed")]
+    public DateTime? LastTwoFactorUsed { get; set; }
 }
 
 // Original design - keeping as reference

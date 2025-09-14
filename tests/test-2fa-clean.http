@@ -1,0 +1,33 @@
+### Clean 2FA Login Test
+### Use this if you're getting JSON parsing errors
+
+@baseUrl = http://localhost:8080
+@username = regular_user
+@password = UserPass123!
+@twoFactorToken = a04a5d91456a4a4fb32207c5dd6b8f49
+
+###
+# Clean 2FA Login Request
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "regular_user",
+  "password": "UserPass123!",
+  "twoFactorCode": "405162",
+  "isRecoveryCode": false,
+  "twoFactorToken": "a04a5d91456a4a4fb32207c5dd6b8f49"
+}
+
+###
+# Alternative: Hardcoded values for testing
+POST http://localhost:8080/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "regular_user",
+  "password": "UserPass123!",
+  "twoFactorCode": "405162",
+  "isRecoveryCode": false,
+  "twoFactorToken": "a04a5d91456a4a4fb32207c5dd6b8f49"
+}

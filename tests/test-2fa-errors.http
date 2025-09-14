@@ -1,0 +1,111 @@
+### 2FA Error Cases Testing
+### Test various error scenarios for 2FA
+
+@baseUrl = http://localhost:8080
+@jwtToken = YOUR_JWT_TOKEN_HERE
+
+###
+# Error: Setup 2FA when already enabled
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer {{jwtToken}}
+
+###
+# Error: Enable 2FA with wrong code
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "000000"
+}
+
+###
+# Error: Enable 2FA when already enabled
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
+
+###
+# Error: Disable 2FA when not enabled
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
+
+###
+# Error: Disable 2FA with wrong code
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "000000"
+}
+
+###
+# Error: 2FA login without 2FA token
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password",
+  "twoFactorCode": "123456",
+  "isRecoveryCode": false,
+  "twoFactorToken": ""
+}
+
+###
+# Error: 2FA login with expired token
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password",
+  "twoFactorCode": "123456",
+  "isRecoveryCode": false,
+  "twoFactorToken": "expired_token"
+}
+
+###
+# Error: 2FA login with wrong code
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password",
+  "twoFactorCode": "000000",
+  "isRecoveryCode": false,
+  "twoFactorToken": "valid_token"
+}
+
+###
+# Error: Use recovery code that doesn't exist
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password",
+  "twoFactorCode": "INVALID1",
+  "isRecoveryCode": true,
+  "twoFactorToken": "valid_token"
+}
+
+###
+# Error: Access 2FA endpoints without authentication
+POST {{baseUrl}}/api/2fa/setup
+
+###
+# Error: Access 2FA endpoints with invalid token
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer invalid_token

@@ -1,5 +1,6 @@
 using HotelBookingAPI.Models;
 using HotelBookingAPI.Services;
+using HotelBookingAPI.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -11,11 +12,13 @@ public class AuthController : ControllerBase
 {
     private readonly UserService _userService;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly ITwoFactorService _twoFactorService;
 
-    public AuthController(UserService userService, JwtTokenService jwtTokenService)
+    public AuthController(UserService userService, JwtTokenService jwtTokenService, ITwoFactorService twoFactorService)
     {
         _userService = userService;
         _jwtTokenService = jwtTokenService;
+        _twoFactorService = twoFactorService;
     }
 
     [HttpPost("register")] // This will make the full route /api/Auth/register
@@ -66,12 +69,88 @@ public class AuthController : ControllerBase
             )));
         }
 
+        // Check if 2FA is enabled
+        if (user.IsTwoFactorEnabled)
+        {
+            // Generate temporary 2FA token
+            var twoFactorToken = _twoFactorService.GenerateTwoFactorToken(user.Id!);
+            
+            return Ok(new TwoFactorLoginResponse
+            {
+                RequiresTwoFactor = true,
+                TwoFactorToken = twoFactorToken,
+                Message = "Please provide your 2FA code"
+            });
+        }
+
         // Generate JWT token with role claims
         var token = _jwtTokenService.GenerateToken(user);
 
         return Ok(new 
         { 
             Message = "Login successful",
+            User = new { user.Id, user.Username, user.Role },
+            Token = token
+        });
+    }
+
+    [HttpPost("login-2fa")] // Two-factor authentication login
+    [AllowAnonymous]
+    public async Task<IActionResult> LoginWith2FA(TwoFactorLoginRequest request)
+    {
+        // First verify the username/password like regular login
+        var user = await _userService.AuthenticateAsync(request.Username, request.Password);
+
+        if (user == null)
+        {
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: "Invalid username or password."
+            )));
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: "Account is deactivated."
+            )));
+        }
+
+        if (!user.IsTwoFactorEnabled)
+        {
+            return BadRequest(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status400BadRequest,
+                Message: "2FA is not enabled for this account."
+            )));
+        }
+
+        // Validate the 2FA token
+        if (!_twoFactorService.ValidateTwoFactorToken(request.TwoFactorToken, user.Id!))
+        {
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: "Invalid or expired 2FA token."
+            )));
+        }
+
+        // Verify the 2FA code
+        var isCodeValid = await _twoFactorService.VerifyTwoFactorLoginAsync(user.Id!, request.TwoFactorCode, request.IsRecoveryCode);
+        
+        if (!isCodeValid)
+        {
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: request.IsRecoveryCode ? "Invalid recovery code." : "Invalid 2FA code."
+            )));
+        }
+
+        // Generate JWT token
+        var token = _jwtTokenService.GenerateToken(user);
+
+        return Ok(new 
+        { 
+            Message = "2FA login successful",
             User = new { user.Id, user.Username, user.Role },
             Token = token
         });
@@ -102,4 +181,4 @@ public class AuthController : ControllerBase
 /// <summary>
 /// Request model for admin registration
 /// </summary>
-public record AdminRegisterRequest(string Username, string Password, UserRole Role);
+public record AdminRegisterRequest(string Username, string Password, string Email, UserRole Role);

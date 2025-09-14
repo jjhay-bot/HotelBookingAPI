@@ -38,6 +38,7 @@ public class SecurityMiddleware
             return;
         }
 
+        // [📌] 
         // Validate request size
         if (context.Request.ContentLength > 1024 * 1024) // 1MB limit
         {
@@ -51,7 +52,7 @@ public class SecurityMiddleware
     private void AddSecurityHeaders(HttpContext context)
     {
         var response = context.Response;
-        
+
         // Prevent clickjacking
         // OPTIONS for X-Frame-Options:
         // 1. "DENY" - Never allow framing (most secure)
@@ -85,13 +86,13 @@ public class SecurityMiddleware
         // Option B: Use CSP frame-ancestors (recommended for modern browsers)
         // Add to the CSP below: frame-ancestors 'self' https://trusted-domain.com;
         response.Headers.Append("X-Frame-Options", "DENY");
-        
+
         // Prevent MIME type sniffing
         response.Headers.Append("X-Content-Type-Options", "nosniff");
-        
+
         // XSS Protection
         response.Headers.Append("X-XSS-Protection", "1; mode=block");
-        
+
         // Content Security Policy
         // TO ALLOW SPECIFIC WEBSITES TO FRAME YOUR API:
         // Add frame-ancestors directive with allowed domains:
@@ -102,60 +103,61 @@ public class SecurityMiddleware
         // Examples:
         // - script-src 'self' https://cdn.trusted.com - Allow scripts from CDN
         // - img-src 'self' data: https://images.trusted.com - Allow images from external domain
-        response.Headers.Append("Content-Security-Policy", 
+        response.Headers.Append("Content-Security-Policy",
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'");
-        
+
         // Strict Transport Security (HTTPS only)
         if (context.Request.IsHttps)
         {
             response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
         }
-        
+
         // Referrer Policy
         response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-        
+
         // Feature Policy
         response.Headers.Append("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
     }
 
+    // [📌] Check for suspicious activity
     private async Task<bool> CheckForSuspiciousActivity(HttpContext context)
     {
         var request = context.Request;
-        
+
         // Check for common injection patterns in query parameters
         foreach (var param in request.Query)
         {
             var value = param.Value.ToString().ToLower();
-            
+
             // SQL injection patterns
-            if (value.Contains("' or ") || value.Contains("' and ") || 
+            if (value.Contains("' or ") || value.Contains("' and ") ||
                 value.Contains("union select") || value.Contains("drop table") ||
                 value.Contains("delete from") || value.Contains("insert into"))
             {
-                _logger.LogWarning("SQL injection attempt detected from {IP}: {Pattern}", 
+                _logger.LogWarning("SQL injection attempt detected from {IP}: {Pattern}",
                     context.Connection.RemoteIpAddress, value);
                 return true;
             }
-            
+
             // NoSQL injection patterns
             if (value.Contains("$ne") || value.Contains("$gt") || value.Contains("$lt") ||
                 value.Contains("$regex") || value.Contains("$where") || value.Contains("$eval"))
             {
-                _logger.LogWarning("NoSQL injection attempt detected from {IP}: {Pattern}", 
+                _logger.LogWarning("NoSQL injection attempt detected from {IP}: {Pattern}",
                     context.Connection.RemoteIpAddress, value);
                 return true;
             }
-            
+
             // Script injection patterns
-            if (value.Contains("<script") || value.Contains("javascript:") || 
+            if (value.Contains("<script") || value.Contains("javascript:") ||
                 value.Contains("onload=") || value.Contains("onerror="))
             {
-                _logger.LogWarning("Script injection attempt detected from {IP}: {Pattern}", 
+                _logger.LogWarning("Script injection attempt detected from {IP}: {Pattern}",
                     context.Connection.RemoteIpAddress, value);
                 return true;
             }
         }
-        
+
         // Check request body for POST/PUT requests
         if (request.Method == "POST" || request.Method == "PUT")
         {
@@ -164,19 +166,20 @@ public class SecurityMiddleware
                 request.EnableBuffering();
                 var body = await new StreamReader(request.Body).ReadToEndAsync();
                 request.Body.Position = 0;
-                
+
                 if (ContainsSuspiciousJsonPatterns(body))
                 {
-                    _logger.LogWarning("Suspicious JSON payload detected from {IP}: {Body}", 
+                    _logger.LogWarning("Suspicious JSON payload detected from {IP}: {Body}",
                         context.Connection.RemoteIpAddress, body);
                     return true;
                 }
             }
         }
-        
+
         return false;
     }
 
+    // [📌] 
     private bool ContainsSuspiciousJsonPatterns(string json)
     {
         var suspiciousPatterns = new[]
@@ -185,32 +188,33 @@ public class SecurityMiddleware
             "\"$or\":", "\"$and\":", "\"$not\":", "\"$nor\":", "\"$exists\":",
             "function(", "javascript:", "<script", "eval(", "setTimeout("
         };
-        
+
         return suspiciousPatterns.Any(pattern => json.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 
+    // [📌] 
     private bool IsRateLimited(HttpContext context)
     {
         var clientIP = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var now = DateTime.UtcNow;
-        
+
         lock (_rateLimitLock)
         {
             // Simple rate limiting: 100 requests per minute per IP
             var key = $"{clientIP}:{now:yyyy-MM-dd-HH-mm}";
-            
+
             if (_rateLimitStore.ContainsKey(key))
             {
                 // Clean old entries
                 var keysToRemove = _rateLimitStore.Keys
                     .Where(k => _rateLimitStore[k] < now.AddMinutes(-2))
                     .ToList();
-                
+
                 foreach (var oldKey in keysToRemove)
                 {
                     _rateLimitStore.Remove(oldKey);
                 }
-                
+
                 // Check if rate limit exceeded
                 var requestCount = _rateLimitStore.Count(kvp => kvp.Key.StartsWith($"{clientIP}:"));
                 if (requestCount > 100)
@@ -219,28 +223,28 @@ public class SecurityMiddleware
                     return true;
                 }
             }
-            
+
             _rateLimitStore[key] = now;
         }
-        
+
         return false;
     }
 
     private async Task BlockRequest(HttpContext context, string reason)
     {
-        _logger.LogWarning("Blocking request from {IP}: {Reason}", 
+        _logger.LogWarning("Blocking request from {IP}: {Reason}",
             context.Connection.RemoteIpAddress, reason);
-        
+
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
         context.Response.ContentType = "application/json";
-        
+
         var response = new
         {
             error = "Request blocked",
             message = "Your request has been blocked due to security policies",
             timestamp = DateTime.UtcNow
         };
-        
+
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 }

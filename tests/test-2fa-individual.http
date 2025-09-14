@@ -1,0 +1,86 @@
+### 2FA Quick Test - Individual Endpoints
+### Use this file to test individual 2FA endpoints
+
+@baseUrl = http://localhost:8080
+# @baseUrl = https://localhost:7070
+
+# Replace with your actual JWT token
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2OGM2OThlOTg3NzhlMWU2YzMwYzFiZDYiLCJ1bmlxdWVfbmFtZSI6InJlZ3VsYXJfdXNlciIsInJvbGUiOlsiVXNlciIsIlVzZXIiXSwidXNlcklkIjoiNjhjNjk4ZTk4Nzc4ZTFlNmMzMGMxYmQ2IiwiaXNBY3RpdmUiOiJUcnVlIiwibmJmIjoxNzU3ODYyOTA4LCJleHAiOjE3NTc5NDkzMDgsImlhdCI6MTc1Nzg2MjkwOCwiaXNzIjoiSG90ZWxCb29raW5nQVBJIiwiYXVkIjoiSG90ZWxCb29raW5nQVBJVXNlcnMifQ.RyjmveHslbtW2kXDkG4ea1Uen78m7VZhWd-OHZamuZ8
+
+###
+# 1. Setup 2FA - Returns QR code and secret
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer {{jwtToken}}
+
+###
+# 2. Enable 2FA with authenticator code
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
+
+###
+# 3. Check 2FA status
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer {{jwtToken}}
+
+###
+# 4. Get recovery codes count
+GET {{baseUrl}}/api/2fa/recovery-codes/count
+Authorization: Bearer {{jwtToken}}
+
+###
+# 5. Regenerate recovery codes
+POST {{baseUrl}}/api/2fa/recovery-codes/regenerate
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+###
+# 6. Disable 2FA
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
+
+###
+# 7. Test regular login (no 2FA)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+
+###
+# 8. Test 2FA login step 1 (returns 2FA token)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "your_username_with_2fa",
+  "password": "your_password"
+}
+
+###
+# 9. Test 2FA login step 2 (complete with code)
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "your_username_with_2fa",
+  "password": "your_password",
+  "twoFactorCode": "123456",
+  "isRecoveryCode": false,
+  "twoFactorToken": "your_2fa_token_from_step1"
+}

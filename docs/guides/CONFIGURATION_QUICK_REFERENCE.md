@@ -1,4 +1,4 @@
-# ⚙️ Configuration Quick Reference Guide
+#  ⚙️ Configuration Quick Reference Guide
 
 ## 💾 **Server-Side Caching (Live Memory Storage)**
 
@@ -16,11 +16,11 @@ private readonly IMemoryCache _cache;
 
 ### **How It Works**
 
-| Request Flow | Cache Status | What Happens |
-|--------------|-------------|--------------|
-| **First request** | Cache MISS | Query MongoDB → Store in server RAM |
-| **Next requests (within 5 min)** | Cache HIT | Serve from server RAM (no DB query) |
-| **After 5 minutes** | Cache EXPIRED | Query MongoDB → Update server RAM |
+| Request Flow                           | Cache Status  | What Happens                         |
+| -------------------------------------- | ------------- | ------------------------------------ |
+| **First request**                | Cache MISS    | Query MongoDB → Store in server RAM |
+| **Next requests (within 5 min)** | Cache HIT     | Serve from server RAM (no DB query)  |
+| **After 5 minutes**              | Cache EXPIRED | Query MongoDB → Update server RAM   |
 
 ### **Performance Impact**
 
@@ -30,11 +30,11 @@ private readonly IMemoryCache _cache;
 
 ### **Cache vs Browser Storage**
 
-| Type | Location | Purpose | Survives Server Restart |
-|------|----------|---------|------------------------|
-| **Server Cache (Our Implementation)** | Web API Server RAM | Reduce DB queries | ❌ No |
-| **Browser Cache** | User's browser | Reduce HTTP requests | ✅ Yes |
-| **Redis Cache** | External Redis server | Shared server cache | ✅ Yes |
+| Type                                        | Location              | Purpose              | Survives Server Restart |
+| ------------------------------------------- | --------------------- | -------------------- | ----------------------- |
+| **Server Cache (Our Implementation)** | Web API Server RAM    | Reduce DB queries    | ❌ No                   |
+| **Browser Cache**                     | User's browser        | Reduce HTTP requests | ✅ Yes                  |
+| **Redis Cache**                       | External Redis server | Shared server cache  | ✅ Yes                  |
 
 💡 **See [SERVER_SIDE_CACHING_EXPLAINED.md](./SERVER_SIDE_CACHING_EXPLAINED.md) for detailed explanation**
 
@@ -51,12 +51,14 @@ private readonly IMemoryCache _cache;
 ```
 
 **Cleanup triggers:**
+
 - ⏰ **Timer-based:** Every 30 seconds (expired items)
 - 🔥 **Memory pressure:** When system RAM usage >85%
 - 📏 **Size limits:** When cache size limits reached (if configured)
 - ⏳ **Item expiration:** Your 5-minute user status expiry
 
 **What gets cleaned up first:**
+
 1. Expired items (past their expiration time)
 2. Low priority cache entries
 3. Normal priority entries (your user status cache)
@@ -68,8 +70,8 @@ private readonly IMemoryCache _cache;
 
 ### **Current Setting Location**
 
-**File:** `/Security/OptimizedUserStatusValidationMiddleware.cs`  
-**Line:** 18  
+**File:** `/Security/OptimizedUserStatusValidationMiddleware.cs`
+**Line:** 18
 **Current Value:** 5 minutes
 
 ```csharp
@@ -79,13 +81,12 @@ private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(5);
 ### **Quick Change Instructions**
 
 1. **Open file:** `/Security/OptimizedUserStatusValidationMiddleware.cs`
-
 2. **Find line 18 and change the value:**
 
    ```csharp
    // From:
    private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(5);
-   
+
    // To one of these options:
    private static readonly TimeSpan CacheExpiry = TimeSpan.FromSeconds(30);  // Maximum security
    private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(1);   // High security
@@ -93,7 +94,6 @@ private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(5);
    private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(10);  // Better performance
    private static readonly TimeSpan CacheExpiry = TimeSpan.FromHours(1);     // Development only
    ```
-
 3. **Rebuild and restart:**
 
    ```bash
@@ -103,13 +103,13 @@ private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(5);
 
 ### **Recommended Settings by Environment**
 
-| Environment | Setting | Reason |
-|-------------|---------|---------|
-| **Production (High Security)** | `TimeSpan.FromMinutes(1)` | Quick response to user deactivation |
-| **Production (Balanced)** | `TimeSpan.FromMinutes(5)` | Good security + performance |
-| **Production (High Traffic)** | `TimeSpan.FromMinutes(10)` | Reduced database load |
-| **Development** | `TimeSpan.FromMinutes(30)` | Less frequent validation |
-| **Testing** | `TimeSpan.FromSeconds(1)` | Immediate validation |
+| Environment                          | Setting                      | Reason                              |
+| ------------------------------------ | ---------------------------- | ----------------------------------- |
+| **Production (High Security)** | `TimeSpan.FromMinutes(1)`  | Quick response to user deactivation |
+| **Production (Balanced)**      | `TimeSpan.FromMinutes(5)`  | Good security + performance         |
+| **Production (High Traffic)**  | `TimeSpan.FromMinutes(10)` | Reduced database load               |
+| **Development**                | `TimeSpan.FromMinutes(30)` | Less frequent validation            |
+| **Testing**                    | `TimeSpan.FromSeconds(1)`  | Immediate validation                |
 
 ### **Security Impact**
 

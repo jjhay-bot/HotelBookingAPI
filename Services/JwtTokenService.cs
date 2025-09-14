@@ -25,6 +25,7 @@ public class JwtTokenService
     /// </summary>
     /// <param name="user">The user to generate token for</param>
     /// <returns>JWT token string</returns>
+    // [🔒] Generate token
     public string GenerateToken(User user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -34,6 +35,7 @@ public class JwtTokenService
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id!),
                 new Claim(ClaimTypes.Name, user.Username),
+                // [🔒] 
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("userId", user.Id!),
                 new Claim("role", user.Role.ToString()),
@@ -56,6 +58,8 @@ public class JwtTokenService
     /// </summary>
     /// <param name="token">The token to validate</param>
     /// <returns>Claims principal if valid, null if invalid</returns>
+
+    // [🔒] Validate token
     public ClaimsPrincipal? ValidateToken(string token)
     {
         try

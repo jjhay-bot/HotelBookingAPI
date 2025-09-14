@@ -37,7 +37,7 @@ public class UserService
         await _usersCollection.DeleteOneAsync(x => x.Id == id);
 
     // Authentication methods
-    public async Task<User?> RegisterAsync(string username, string password, UserRole role = UserRole.User)
+    public async Task<User?> RegisterAsync(string username, string password, UserRole role = UserRole.User, string? email = null)
     {
         // Input validation
         if (!InputValidator.IsValidUsername(username))
@@ -51,6 +51,12 @@ public class UserService
             return null; // Invalid password
         }
 
+        // Optional email validation
+        if (!string.IsNullOrWhiteSpace(email) && !email.Contains("@"))
+        {
+            return null; // Invalid email format if provided
+        }
+
         var existingUser = await GetByUsernameAsync(username);
         if (existingUser != null)
         {
@@ -60,6 +66,7 @@ public class UserService
         var newUser = new User
         {
             Username = username,
+            Email = email ?? $"{username}@hotelapi.local", // Provide default email for 2FA
             PasswordHash = PasswordHasher.HashPassword(password),
             Role = role,
             CreatedAt = DateTime.UtcNow,

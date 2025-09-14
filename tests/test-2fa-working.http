@@ -1,0 +1,94 @@
+### 2FA Test - Clean Working Version
+# This file contains working 2FA test cases with hardcoded values for easy testing
+
+@baseUrl = http://localhost:8080
+
+###
+# Step 1: Register a new user (no email required)
+POST {{baseUrl}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "username": "test2fa_user",
+  "password": "TestPass123!"
+}
+
+###
+# Step 2: Login to get JWT token
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "test2fa_user",
+  "password": "TestPass123!"
+}
+
+###
+# Step 3: Setup 2FA (get QR code setup)
+# Replace YOUR_JWT_TOKEN with the token from step 2
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+
+###
+# Step 4: Enable 2FA
+# Replace YOUR_JWT_TOKEN and AUTHENTICATOR_CODE with actual values
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+
+{
+  "verificationCode": "AUTHENTICATOR_CODE"
+}
+
+###
+# Step 5: Test regular login (should require 2FA now)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "test2fa_user",
+  "password": "TestPass123!"
+}
+
+###
+# Step 6: Complete 2FA login
+# Replace TWO_FACTOR_TOKEN and AUTHENTICATOR_CODE with actual values
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "test2fa_user",
+  "password": "TestPass123!",
+  "twoFactorCode": "AUTHENTICATOR_CODE",
+  "isRecoveryCode": false,
+  "twoFactorToken": "TWO_FACTOR_TOKEN"
+}
+
+###
+# Step 7: Get recovery codes (for backup access)
+# Replace YOUR_JWT_TOKEN and AUTHENTICATOR_CODE with actual values
+POST {{baseUrl}}/api/2fa/recovery-codes/regenerate
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+
+{
+  "code": "AUTHENTICATOR_CODE"
+}
+
+###
+# Step 8: Test 2FA status
+# Replace YOUR_JWT_TOKEN with actual value
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer YOUR_JWT_TOKEN
+
+###
+# Step 9: Disable 2FA (when done testing)
+# Replace YOUR_JWT_TOKEN and AUTHENTICATOR_CODE with actual values
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+
+{
+  "verificationCode": "AUTHENTICATOR_CODE"
+}

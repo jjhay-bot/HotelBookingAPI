@@ -1,0 +1,111 @@
+### 2FA Testing - No Email Required!
+### Test the 2FA functionality using only username/password
+
+@baseUrl = http://localhost:8080
+@username = regular_user
+@password = UserPass123!
+
+###
+# Step 1: Register a new user (NO EMAIL REQUIRED!)
+POST {{baseUrl}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+# Copy the token from above response
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2OGM2OThlOTg3NzhlMWU2YzMwYzFiZDYiLCJ1bmlxdWVfbmFtZSI6InJlZ3VsYXJfdXNlciIsInJvbGUiOlsiVXNlciIsIlVzZXIiXSwidXNlcklkIjoiNjhjNjk4ZTk4Nzc4ZTFlNmMzMGMxYmQ2IiwiaXNBY3RpdmUiOiJUcnVlIiwibmJmIjoxNzU3ODYyOTA4LCJleHAiOjE3NTc5NDkzMDgsImlhdCI6MTc1Nzg2MjkwOCwiaXNzIjoiSG90ZWxCb29raW5nQVBJIiwiYXVkIjoiSG90ZWxCb29raW5nQVBJVXNlcnMifQ.RyjmveHslbtW2kXDkG4ea1Uen78m7VZhWd-OHZamuZ8
+
+###
+# Step 2: Setup 2FA (generates QR code using USERNAME)
+POST {{baseUrl}}/api/2fa/setup
+Authorization: Bearer {{jwtToken}}
+
+###
+# Step 3: Check 2FA status (should show isEnabled: false)
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer {{jwtToken}}
+
+###
+# Step 4: Enable 2FA (use code from authenticator app)
+# - Install Google Authenticator or Authy on your phone
+# - Scan the QR code from Step 2 response 
+# - The app will show "HotelBookingAPI:test2fa" as the account name
+# - Enter the 6-digit code from your authenticator app
+POST {{baseUrl}}/api/2fa/enable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "350643"
+}
+
+###
+# Step 5: Check 2FA status again (should show isEnabled: true)
+GET {{baseUrl}}/api/2fa/status
+Authorization: Bearer {{jwtToken}}
+
+###
+# Step 6: Test regular login (should require 2FA now)
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+# This should return: requiresTwoFactor: true and a twoFactorToken
+# Copy the twoFactorToken from response and update the variable below
+@twoFactorToken = b1ee3ad48a32495ab0333a6ef2c13290
+
+###
+# Step 7: Complete 2FA login with authenticator code
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "twoFactorCode": "730470",
+  "isRecoveryCode": false,
+  "twoFactorToken": "{{twoFactorToken}}"
+}
+
+###
+# Step 8: Get recovery codes for backup access
+POST {{baseUrl}}/api/2fa/recovery-codes/regenerate
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+# Copy one of the recovery codes from the response
+@recoveryCode = PASTE_RECOVERY_CODE_HERE
+
+###
+# Step 9: Test login with recovery code
+POST {{baseUrl}}/api/Auth/login-2fa
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "twoFactorCode": "{{recoveryCode}}",
+  "isRecoveryCode": true,
+  "twoFactorToken": "{{twoFactorToken}}"
+}
+
+###
+# Step 10: Disable 2FA (when you're done testing)
+POST {{baseUrl}}/api/2fa/disable
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "verificationCode": "123456"
+}
