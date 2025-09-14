@@ -16,6 +16,15 @@ public class User
     [BsonElement("passwordHash")]
     [JsonIgnore] // This prevents PasswordHash from appearing in API responses
     public string PasswordHash { get; set; } = null!;
+
+    [BsonElement("role")]
+    public UserRole Role { get; set; } = UserRole.User; // Default to User role
+
+    [BsonElement("createdAt")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("isActive")]
+    public bool IsActive { get; set; } = true;
 }
 
 // Original design - keeping as reference

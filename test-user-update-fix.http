@@ -1,0 +1,68 @@
+### Quick Test for User Update Fix
+# Test to verify that user update works with the new request model
+
+@baseUrl = http://localhost:5268
+@api = {{baseUrl}}/api
+
+### 1. First register a test user
+POST {{api}}/Auth/register
+Content-Type: application/json
+
+{
+  "username": "test_update_user",
+  "password": "TestPass123!"
+}
+
+### 2. Login as test user to get token
+POST {{api}}/Auth/login
+Content-Type: application/json
+
+{
+  "username": "test_update_user",
+  "password": "TestPass123!"
+}
+
+### 3. Login as admin (replace with actual admin credentials)
+POST {{api}}/Auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "AdminPass123!"
+}
+
+### 4. Test user update with proper request format
+# Replace {{userId}} with actual user ID from registration response
+# Replace {{adminToken}} with actual admin token from login response
+PUT {{api}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "username": "updated_test_user",
+  "password": "NewPassword123!",
+  "role": 0
+}
+
+### 5. Test partial update
+PATCH {{api}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "username": "partially_updated_user"
+}
+
+### 6. Test partial update with password only
+PATCH {{api}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "password": "AnotherNewPass123!"
+}
+
+### Expected Results:
+# Tests 4, 5, 6 should return 204 No Content (success)
+# The password field should be accepted and properly hashed
+# Username updates should work correctly

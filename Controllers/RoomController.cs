@@ -8,7 +8,7 @@ namespace HotelBookingAPI.Controllers;
 
 [ApiController]
 [Route("api/rooms")]
-[Authorize]
+[Authorize] // Default protection for all room operations
 public class RoomController : ControllerBase
 {
     private readonly RoomService _roomService;
@@ -41,15 +41,29 @@ public class RoomController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Post(Room newRoom)
+    [Authorize(Roles = "Admin,Manager")] // Only Admin and Manager can create rooms
+    public async Task<IActionResult> Post(RoomUpdateRequest createRequest)
     {
+        var newRoom = new Room
+        {
+            Name = createRequest.Name,
+            Capacity = createRequest.Capacity,
+            PricePerNight = createRequest.PricePerNight,
+            IsAvailable = createRequest.IsAvailable,
+            RoomType = createRequest.RoomType,
+            Description = createRequest.Description,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
         await _roomService.CreateAsync(newRoom);
 
         return CreatedAtAction(nameof(Get), new { id = newRoom.Id }, newRoom);
     }
 
     [HttpPut("{id:length(24)}")]
-    public async Task<IActionResult> Update(string id, Room updatedRoom)
+    [Authorize(Roles = "Admin,Manager")] // Only Admin and Manager can update rooms
+    public async Task<IActionResult> Update(string id, RoomUpdateRequest updateRequest)
     {
         var room = await _roomService.GetAsync(id);
 
@@ -61,15 +75,23 @@ public class RoomController : ControllerBase
             )));
         }
 
-        updatedRoom.Id = id; // Ensure the ID is set correctly
+        // Update room properties
+        room.Name = updateRequest.Name;
+        room.Capacity = updateRequest.Capacity;
+        room.PricePerNight = updateRequest.PricePerNight;
+        room.IsAvailable = updateRequest.IsAvailable;
+        room.RoomType = updateRequest.RoomType;
+        room.Description = updateRequest.Description;
+        room.UpdatedAt = DateTime.UtcNow;
 
-        await _roomService.UpdateAsync(id, updatedRoom);
+        await _roomService.UpdateAsync(id, room);
 
         return NoContent();
     }
 
     [HttpPatch("{id:length(24)}")]
-    public async Task<IActionResult> PartialUpdate(string id, Room partialRoom)
+    [Authorize(Roles = "Admin,Manager")] // Only Admin and Manager can partially update rooms
+    public async Task<IActionResult> PartialUpdate(string id, RoomPartialUpdateRequest partialUpdateRequest)
     {
         var existingRoom = await _roomService.GetAsync(id);
 
@@ -81,15 +103,27 @@ public class RoomController : ControllerBase
             )));
         }
 
-        // Only update non-null/non-default properties
-        if (!string.IsNullOrEmpty(partialRoom.Name))
-            existingRoom.Name = partialRoom.Name;
+        // Only update provided properties
+        if (!string.IsNullOrEmpty(partialUpdateRequest.Name))
+            existingRoom.Name = partialUpdateRequest.Name;
         
-        if (partialRoom.Capacity > 0)
-            existingRoom.Capacity = partialRoom.Capacity;
+        if (partialUpdateRequest.Capacity.HasValue)
+            existingRoom.Capacity = partialUpdateRequest.Capacity.Value;
 
-        // Ensure the ID doesn't get changed
-        existingRoom.Id = id;
+        if (partialUpdateRequest.PricePerNight.HasValue)
+            existingRoom.PricePerNight = partialUpdateRequest.PricePerNight.Value;
+
+        if (partialUpdateRequest.IsAvailable.HasValue)
+            existingRoom.IsAvailable = partialUpdateRequest.IsAvailable.Value;
+
+        if (!string.IsNullOrEmpty(partialUpdateRequest.RoomType))
+            existingRoom.RoomType = partialUpdateRequest.RoomType;
+
+        if (!string.IsNullOrEmpty(partialUpdateRequest.Description))
+            existingRoom.Description = partialUpdateRequest.Description;
+
+        // Update timestamp
+        existingRoom.UpdatedAt = DateTime.UtcNow;
 
         await _roomService.UpdateAsync(id, existingRoom);
 
@@ -97,6 +131,7 @@ public class RoomController : ControllerBase
     }
 
     [HttpDelete("{id:length(24)}")]
+    [Authorize(Roles = "Admin")] // Only Admin can delete rooms
     public async Task<IActionResult> Delete(string id)
     {
         var room = await _roomService.GetAsync(id);

@@ -135,7 +135,81 @@ bool isValid = PasswordHasher.VerifyPassword("userPassword123", hashedPassword);
 
 ---
 
-## 🔑 JWT Authentication
+## � Role-Based Authorization (`UserRole.cs`, `JwtTokenService.cs`)
+
+### 🎯 User Roles Implementation
+```csharp
+// Location: Models/UserRole.cs
+```
+
+| Role | Value | Permissions |
+|------|-------|-------------|
+| `User` | 0 | View and book rooms, view own profile |
+| `Manager` | 1 | Manage rooms, view user data, User permissions |
+| `Admin` | 2 | Full system access, manage users and roles |
+
+### 🎯 JWT Token Generation with Role Claims
+```csharp
+// Location: Services/JwtTokenService.cs
+```
+
+**Claims Included in JWT:**
+- `ClaimTypes.NameIdentifier` - User ID
+- `ClaimTypes.Name` - Username
+- `ClaimTypes.Role` - User role (for ASP.NET Core authorization)
+- `"userId"` - Custom user ID claim
+- `"role"` - Custom role claim
+- `"isActive"` - Account status
+
+**Token Configuration:**
+- **Expiration:** 24 hours
+- **Algorithm:** HMAC SHA-256
+- **Validation:** Issuer, Audience, Lifetime, Signing Key
+
+### 🎯 Controller Authorization Levels
+
+#### **UserController Authorization:**
+```csharp
+[Authorize(Roles = "Admin,Manager")] // GET /api/users - View all users
+[Authorize] // GET /api/users/{id} - View user details
+[Authorize(Roles = "Admin")] // PUT/PATCH/DELETE - Modify users
+[Authorize(Roles = "Admin")] // PUT /api/users/{id}/role - Change roles
+[Authorize(Roles = "Admin")] // PUT /api/users/{id}/deactivate - Deactivate users
+```
+
+#### **RoomController Authorization:**
+```csharp
+[AllowAnonymous] // GET /api/rooms - Public room viewing
+[AllowAnonymous] // GET /api/rooms/{id} - Public room details
+[Authorize(Roles = "Admin,Manager")] // POST/PUT/PATCH - Manage rooms
+[Authorize(Roles = "Admin")] // DELETE - Delete rooms
+```
+
+#### **AuthController Endpoints:**
+```csharp
+[AllowAnonymous] // POST /api/Auth/register - Public registration (User role)
+[AllowAnonymous] // POST /api/Auth/login - Public login
+[Authorize(Roles = "Admin")] // POST /api/Auth/register-admin - Create Admin/Manager
+```
+
+### 🎯 Role Management Features
+
+#### **User Registration:**
+- **Default Registration:** Creates `User` role accounts
+- **Admin Registration:** Admins can create `Manager` and `Admin` accounts
+- **Automatic Token Generation:** Users receive JWT token upon registration/login
+
+#### **Role Management Methods:**
+```csharp
+// Location: Services/UserService.cs
+UpdateUserRoleAsync(userId, newRole) // Change user role
+DeactivateUserAsync(userId) // Deactivate user account
+GetUsersByRoleAsync(role) // Get users by role
+```
+
+---
+
+## �🔑 JWT Authentication
 
 ### 🎯 Configuration
 ```json

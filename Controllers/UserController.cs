@@ -1,5 +1,6 @@
 using HotelBookingAPI.Models;
 using HotelBookingAPI.Services;
+using HotelBookingAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,10 +20,12 @@ public class UserController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,Manager")] // Only Admin and Manager can view all users
     public async Task<List<User>> Get() =>
         await _userService.GetAsync();
 
     [HttpGet("{id:length(24)}")]
+    [Authorize] // Any authenticated user can view user details (could be restricted further)
     public async Task<ActionResult<User>> Get(string id)
     {
         var user = await _userService.GetAsync(id);
@@ -48,7 +51,8 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("{id:length(24)}")]
-    public async Task<IActionResult> Update(string id, User updatedUser)
+    [Authorize(Roles = "Admin")] // Only Admin can update user data
+    public async Task<IActionResult> Update(string id, UserUpdateRequest updateRequest)
     {
         var user = await _userService.GetAsync(id);
 
@@ -60,15 +64,39 @@ public class UserController : ControllerBase
             )));
         }
 
-        updatedUser.Id = id; // Ensure the ID is set correctly
+        // Update username
+        user.Username = updateRequest.Username;
 
-        await _userService.UpdateAsync(id, updatedUser);
+        // Update password if provided
+        if (!string.IsNullOrEmpty(updateRequest.Password))
+        {
+            // Validate password strength
+            var passwordValidation = InputValidator.ValidatePassword(updateRequest.Password);
+            if (passwordValidation != System.ComponentModel.DataAnnotations.ValidationResult.Success)
+            {
+                return BadRequest(new ErrorResponse(new ErrorInfo(
+                    Code: StatusCodes.Status400BadRequest,
+                    Message: passwordValidation?.ErrorMessage ?? "Password validation failed."
+                )));
+            }
+
+            user.PasswordHash = PasswordHasher.HashPassword(updateRequest.Password);
+        }
+
+        // Update role if provided
+        if (updateRequest.Role.HasValue)
+        {
+            user.Role = updateRequest.Role.Value;
+        }
+
+        await _userService.UpdateAsync(id, user);
 
         return NoContent();
     }
 
     [HttpPatch("{id:length(24)}")]
-    public async Task<IActionResult> PartialUpdate(string id, User partialUser)
+    [Authorize(Roles = "Admin")] // Only Admin can partially update user data
+    public async Task<IActionResult> PartialUpdate(string id, UserPartialUpdateRequest partialUpdateRequest)
     {
         var existingUser = await _userService.GetAsync(id);
 
@@ -80,15 +108,39 @@ public class UserController : ControllerBase
             )));
         }
 
-        // Only update non-null/non-default properties
-        if (!string.IsNullOrEmpty(partialUser.Username))
-            existingUser.Username = partialUser.Username;
+        // Only update provided properties
+        if (!string.IsNullOrEmpty(partialUpdateRequest.Username))
+        {
+            if (!InputValidator.IsValidUsername(partialUpdateRequest.Username))
+            {
+                return BadRequest(new ErrorResponse(new ErrorInfo(
+                    Code: StatusCodes.Status400BadRequest,
+                    Message: "Invalid username format. Must be 3-30 characters with letters, numbers, underscore, or hyphen only."
+                )));
+            }
+            existingUser.Username = partialUpdateRequest.Username;
+        }
         
-        // Don't allow password hash updates through PATCH for security
-        // Use a separate endpoint for password changes
+        // Update password if provided
+        if (!string.IsNullOrEmpty(partialUpdateRequest.Password))
+        {
+            var passwordValidation = InputValidator.ValidatePassword(partialUpdateRequest.Password);
+            if (passwordValidation != System.ComponentModel.DataAnnotations.ValidationResult.Success)
+            {
+                return BadRequest(new ErrorResponse(new ErrorInfo(
+                    Code: StatusCodes.Status400BadRequest,
+                    Message: passwordValidation?.ErrorMessage ?? "Password validation failed."
+                )));
+            }
 
-        // Ensure the ID doesn't get changed
-        existingUser.Id = id;
+            existingUser.PasswordHash = PasswordHasher.HashPassword(partialUpdateRequest.Password);
+        }
+
+        // Update role if provided
+        if (partialUpdateRequest.Role.HasValue)
+        {
+            existingUser.Role = partialUpdateRequest.Role.Value;
+        }
 
         await _userService.UpdateAsync(id, existingUser);
 
@@ -96,6 +148,7 @@ public class UserController : ControllerBase
     }
 
     [HttpDelete("{id:length(24)}")]
+    [Authorize(Roles = "Admin")] // Only Admin can delete users
     public async Task<IActionResult> Delete(string id)
     {
         var user = await _userService.GetAsync(id);
@@ -112,4 +165,49 @@ public class UserController : ControllerBase
 
         return NoContent();
     }
+
+    // Role management endpoints
+    [HttpPut("{id:length(24)}/role")]
+    [Authorize(Roles = "Admin")] // Only Admin can change user roles
+    public async Task<IActionResult> UpdateUserRole(string id, [FromBody] UserRoleUpdateRequest request)
+    {
+        var success = await _userService.UpdateUserRoleAsync(id, request.Role);
+        
+        if (!success)
+        {
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"User with ID {id} not found."
+            )));
+        }
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:length(24)}/deactivate")]
+    [Authorize(Roles = "Admin")] // Only Admin can deactivate users
+    public async Task<IActionResult> DeactivateUser(string id)
+    {
+        var success = await _userService.DeactivateUserAsync(id);
+        
+        if (!success)
+        {
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"User with ID {id} not found."
+            )));
+        }
+
+        return NoContent();
+    }
+
+    [HttpGet("role/{role}")]
+    [Authorize(Roles = "Admin,Manager")] // Admin and Manager can view users by role
+    public async Task<List<User>> GetUsersByRole(UserRole role) =>
+        await _userService.GetUsersByRoleAsync(role);
 }
+
+/// <summary>
+/// Request model for updating user roles
+/// </summary>
+public record UserRoleUpdateRequest(UserRole Role);

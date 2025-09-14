@@ -1,11 +1,6 @@
 using HotelBookingAPI.Models;
 using HotelBookingAPI.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
 
 namespace HotelBookingAPI.Controllers;
@@ -15,35 +10,42 @@ namespace HotelBookingAPI.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserService _userService;
-    private readonly IConfiguration _configuration;
+    private readonly JwtTokenService _jwtTokenService;
 
-    public AuthController(UserService userService, IConfiguration configuration)
+    public AuthController(UserService userService, JwtTokenService jwtTokenService)
     {
         _userService = userService;
-        _configuration = configuration;
+        _jwtTokenService = jwtTokenService;
     }
 
     [HttpPost("register")] // This will make the full route /api/Auth/register
-    [AllowAnonymous] // <-- Add this line
+    [AllowAnonymous]
     public async Task<ActionResult<User>> Register(RegisterRequest request)
     {
-        var user = await _userService.RegisterAsync(request.Username, request.Password);
+        // Default role is User, only Admin can create Admin/Manager accounts
+        var user = await _userService.RegisterAsync(request.Username, request.Password, UserRole.User);
 
         if (user == null)
         {
-            // This could mean username already exists
             return Conflict(new ErrorResponse(new ErrorInfo(
                 Code: StatusCodes.Status409Conflict,
-                Message: "Username already exists."
+                Message: "Username already exists or invalid input."
             )));
         }
 
-        // For security, you might want to return a DTO that doesn't expose PasswordHash
-        return CreatedAtAction(nameof(Register), new { id = user.Id }, user);
+        // Generate token for immediate login after registration
+        var token = _jwtTokenService.GenerateToken(user);
+
+        return Ok(new 
+        { 
+            Message = "Registration successful",
+            User = new { user.Id, user.Username, user.Role },
+            Token = token
+        });
     }
 
     [HttpPost("login")] // This will make the full route /api/Auth/login
-    [AllowAnonymous] // <-- Add this line
+    [AllowAnonymous]
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var user = await _userService.AuthenticateAsync(request.Username, request.Password);
@@ -56,27 +58,48 @@ public class AuthController : ControllerBase
             )));
         }
 
-        // --- JWT Generation ---
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
-
-        var tokenDescriptor = new SecurityTokenDescriptor
+        if (!user.IsActive)
         {
-            Subject = new ClaimsIdentity(new Claim[]
-            {
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id ?? string.Empty)
-                // Add other claims like roles here if needed
-            }),
-            Expires = DateTime.UtcNow.AddDays(7), // Token valid for 7 days
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-            Issuer = _configuration["Jwt:Issuer"]!,
-            Audience = _configuration["Jwt:Audience"]!
-        };
+            return Unauthorized(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status401Unauthorized,
+                Message: "Account is deactivated."
+            )));
+        }
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var tokenString = tokenHandler.WriteToken(token);
+        // Generate JWT token with role claims
+        var token = _jwtTokenService.GenerateToken(user);
 
-        return Ok(new { Token = tokenString }); // Return the token
+        return Ok(new 
+        { 
+            Message = "Login successful",
+            User = new { user.Id, user.Username, user.Role },
+            Token = token
+        });
+    }
+
+    [HttpPost("register-admin")] // Admin endpoint to create Admin/Manager accounts
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<User>> RegisterAdmin(AdminRegisterRequest request)
+    {
+        var user = await _userService.RegisterAsync(request.Username, request.Password, request.Role);
+
+        if (user == null)
+        {
+            return Conflict(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status409Conflict,
+                Message: "Username already exists or invalid input."
+            )));
+        }
+
+        return Ok(new 
+        { 
+            Message = "Admin/Manager registration successful",
+            User = new { user.Id, user.Username, user.Role }
+        });
     }
 }
+
+/// <summary>
+/// Request model for admin registration
+/// </summary>
+public record AdminRegisterRequest(string Username, string Password, UserRole Role);

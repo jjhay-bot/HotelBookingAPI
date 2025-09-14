@@ -41,6 +41,9 @@ public static class SecurityConfiguration
 
         // Use security middleware (custom)
         app.UseMiddleware<SecurityMiddleware>();
+        
+        // Use user status validation middleware (validates deactivated users with old tokens)
+        app.UseMiddleware<UserStatusValidationMiddleware>();
 
         // Use CORS
         app.UseCors();

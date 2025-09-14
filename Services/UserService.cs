@@ -37,7 +37,7 @@ public class UserService
         await _usersCollection.DeleteOneAsync(x => x.Id == id);
 
     // Authentication methods
-    public async Task<User?> RegisterAsync(string username, string password)
+    public async Task<User?> RegisterAsync(string username, string password, UserRole role = UserRole.User)
     {
         // Input validation
         if (!InputValidator.IsValidUsername(username))
@@ -60,7 +60,10 @@ public class UserService
         var newUser = new User
         {
             Username = username,
-            PasswordHash = PasswordHasher.HashPassword(password)
+            PasswordHash = PasswordHasher.HashPassword(password),
+            Role = role,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
         };
 
         await CreateAsync(newUser);
@@ -87,6 +90,38 @@ public class UserService
         }
 
         return user;
+    }
+
+    // Role management methods
+    public async Task<bool> UpdateUserRoleAsync(string userId, UserRole newRole)
+    {
+        var user = await GetAsync(userId);
+        if (user == null)
+        {
+            return false; // User not found
+        }
+
+        user.Role = newRole;
+        await UpdateAsync(userId, user);
+        return true;
+    }
+
+    public async Task<bool> DeactivateUserAsync(string userId)
+    {
+        var user = await GetAsync(userId);
+        if (user == null)
+        {
+            return false; // User not found
+        }
+
+        user.IsActive = false;
+        await UpdateAsync(userId, user);
+        return true;
+    }
+
+    public async Task<List<User>> GetUsersByRoleAsync(UserRole role)
+    {
+        return await _usersCollection.Find(x => x.Role == role && x.IsActive).ToListAsync();
     }
 
     // Legacy method for backward compatibility

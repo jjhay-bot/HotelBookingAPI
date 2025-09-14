@@ -1,5 +1,9 @@
 # 🛡️ SQL Injection Prevention in Hotel Booking API
 
+## 🚀 **Quick Start**
+
+Need to modify settings? Check **[CONFIGURATION_QUICK_REFERENCE.md](./CONFIGURATION_QUICK_REFERENCE.md)** for cache intervals, JWT settings, and all configuration options.
+
 ## Summary
 
 Your Hotel Booking API now has comprehensive security measures to prevent injection attacks and other common vulnerabilities. Here's what we've implemented:

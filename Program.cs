@@ -46,6 +46,10 @@ builder.Services.AddControllers()
 
 builder.Services.AddSingleton<RoomService>();
 builder.Services.AddSingleton<UserService>();
+builder.Services.AddSingleton<JwtTokenService>();
+
+// Add Memory Cache for server-side caching
+builder.Services.AddMemoryCache();
 
 // Add security services
 builder.Services.AddSecurityServices(builder.Configuration);
