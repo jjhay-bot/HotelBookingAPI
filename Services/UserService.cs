@@ -119,6 +119,19 @@ public class UserService
         return true;
     }
 
+    public async Task<bool> ReactivateUserAsync(string userId)
+    {
+        var user = await GetAsync(userId);
+        if (user == null)
+        {
+            return false; // User not found
+        }
+
+        user.IsActive = true;
+        await UpdateAsync(userId, user);
+        return true;
+    }
+
     public async Task<List<User>> GetUsersByRoleAsync(UserRole role)
     {
         return await _usersCollection.Find(x => x.Role == role && x.IsActive).ToListAsync();

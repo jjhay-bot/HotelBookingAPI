@@ -201,6 +201,23 @@ public class UserController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id:length(24)}/reactivate")]
+    [Authorize(Roles = "Admin")] // Only Admin can reactivate users
+    public async Task<IActionResult> ReactivateUser(string id)
+    {
+        var success = await _userService.ReactivateUserAsync(id);
+        
+        if (!success)
+        {
+            return NotFound(new ErrorResponse(new ErrorInfo(
+                Code: StatusCodes.Status404NotFound,
+                Message: $"User with ID {id} not found."
+            )));
+        }
+
+        return NoContent();
+    }
+
     [HttpGet("role/{role}")]
     [Authorize(Roles = "Admin,Manager")] // Admin and Manager can view users by role
     public async Task<List<User>> GetUsersByRole(UserRole role) =>

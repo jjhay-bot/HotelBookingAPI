@@ -2,7 +2,7 @@
 # Test file for demonstrating user roles and authorization
 # Make sure to replace tokens and IDs with actual values from responses
 
-@baseUrl = http://localhost:5268
+@baseUrl = http://localhost:8080
 @api = {{baseUrl}}/api
 
 
@@ -13,7 +13,7 @@
 @managerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2OGM2MWQwMWFjNTAyYTZkNTk0NjhiZmUiLCJ1bmlxdWVfbmFtZSI6ImhvdGVsX21hbmFnZXIiLCJyb2xlIjpbIk1hbmFnZXIiLCJNYW5hZ2VyIl0sInVzZXJJZCI6IjY4YzYxZDAxYWM1MDJhNmQ1OTQ2OGJmZSIsImlzQWN0aXZlIjoiVHJ1ZSIsIm5iZiI6MTc1NzgxNDIzOSwiZXhwIjoxNzU3OTAwNjM5LCJpYXQiOjE3NTc4MTQyMzksImlzcyI6IkhvdGVsQm9va2luZ0FQSSIsImF1ZCI6IkhvdGVsQm9va2luZ0FQSVVzZXJzIn0.jf7_SUdSpg0FZ6fOPpP2a_nD_WhDGfflBAcEntWpbsA
 
 // get by ID
-@userId = 68c61be7ac502a6d59468bfc
+@userId = 68c6bc0cb665cdac554fed39
 @roomId = 68c6220e3c77940d6ad078d5
 @deactivatedUserToken = 68c61be7ac502a6d59468bfc
 
@@ -212,19 +212,27 @@ Authorization: Bearer {{managerToken}}
 PUT {{api}}/users/{{userId}}/deactivate
 Authorization: Bearer {{adminToken}}
 
-### 23. Get users by role - Users (Manager can do this)
+### 23. Reactivate user as Admin (should succeed)
+PUT {{api}}/users/{{userId}}/reactivate
+Authorization: Bearer {{adminToken}}
+
+### 24. Try to reactivate user as Manager (should fail with 403)
+PUT {{api}}/users/{{userId}}/reactivate
+Authorization: Bearer {{managerToken}}
+
+### 25. Get users by role - Users (Manager can do this)
 GET {{api}}/users/role/0
 Authorization: Bearer {{managerToken}}
 
-### 24. Get users by role - Managers (Admin can do this)
+### 26. Get users by role - Managers (Admin can do this)
 GET {{api}}/users/role/1
 Authorization: Bearer {{adminToken}}
 
-### 25. Get users by role - Admins (Admin can do this)
+### 27. Get users by role - Admins (Admin can do this)
 GET {{api}}/users/role/2
 Authorization: Bearer {{adminToken}}
 
-### 26. Try to get users by role as regular user (should fail with 403)
+### 28. Try to get users by role as regular user (should fail with 403)
 GET {{api}}/users/role/0
 Authorization: Bearer {{userToken}}
 
@@ -232,13 +240,13 @@ Authorization: Bearer {{userToken}}
 ### PART 6: ROOM MANAGEMENT TESTS
 ###############################################################################
 
-### 27. Get rooms (anonymous access allowed)
+### 29. Get rooms (anonymous access allowed)
 GET {{api}}/rooms
 
-### 28. Get specific room by ID (anonymous access allowed)
+### 30. Get specific room by ID (anonymous access allowed)
 GET {{api}}/rooms/{{roomId}}
 
-### 29. Try to create room as regular user (should fail with 403)
+### 31. Try to create room as regular user (should fail with 403)
 POST {{api}}/rooms
 Content-Type: application/json
 Authorization: Bearer {{userToken}}
@@ -250,7 +258,7 @@ Authorization: Bearer {{userToken}}
   "isAvailable": true
 }
 
-### 30. Create room as Manager (should succeed)
+### 32. Create room as Manager (should succeed)
 POST {{api}}/rooms
 Content-Type: application/json
 Authorization: Bearer {{managerToken}}
@@ -262,7 +270,7 @@ Authorization: Bearer {{managerToken}}
   "isAvailable": true
 }
 
-### 31. Create room as Admin (should succeed)
+### 33. Create room as Admin (should succeed)
 POST {{api}}/rooms
 Content-Type: application/json
 Authorization: Bearer {{adminToken}}
@@ -274,7 +282,7 @@ Authorization: Bearer {{adminToken}}
   "isAvailable": true
 }
 
-### 32. Try to update room as regular user (should fail with 403)
+### 34. Try to update room as regular user (should fail with 403)
 PUT {{api}}/rooms/{{roomId}}
 Content-Type: application/json
 Authorization: Bearer {{userToken}}
@@ -286,7 +294,7 @@ Authorization: Bearer {{userToken}}
   "isAvailable": false
 }
 
-### 33. Update room as Manager (should succeed)
+### 35. Update room as Manager (should succeed)
 PUT {{api}}/rooms/{{roomId}}
 Content-Type: application/json
 Authorization: Bearer {{managerToken}}
@@ -298,7 +306,7 @@ Authorization: Bearer {{managerToken}}
   "isAvailable": false
 }
 
-### 34. Partial update room as Manager (should succeed)
+### 36. Partial update room as Manager (should succeed)
 PATCH {{api}}/rooms/{{roomId}}
 Content-Type: application/json
 Authorization: Bearer {{managerToken}}
@@ -308,15 +316,15 @@ Authorization: Bearer {{managerToken}}
   "isAvailable": true
 }
 
-### 35. Try to delete room as Manager (should fail with 403 - only Admin can delete)
+### 37. Try to delete room as Manager (should fail with 403 - only Admin can delete)
 DELETE {{api}}/rooms/{{roomId}}
 Authorization: Bearer {{managerToken}}
 
-### 36. Try to delete room as regular user (should fail with 403)
+### 38. Try to delete room as regular user (should fail with 403)
 DELETE {{api}}/rooms/{{roomId}}
 Authorization: Bearer {{userToken}}
 
-### 37. Delete room as Admin (should succeed)
+### 39. Delete room as Admin (should succeed)
 DELETE {{api}}/rooms/{{roomId}}
 Authorization: Bearer {{adminToken}}
 
@@ -324,14 +332,14 @@ Authorization: Bearer {{adminToken}}
 ### PART 7: AUTHENTICATION AND AUTHORIZATION EDGE CASES
 ###############################################################################
 
-### 38. Access protected endpoint without token (should fail with 401)
+### 40. Access protected endpoint without token (should fail with 401)
 GET {{api}}/users
 
-### 39. Access protected endpoint with invalid token (should fail with 401)
+### 41. Access protected endpoint with invalid token (should fail with 401)
 GET {{api}}/users
 Authorization: Bearer invalid.token.here
 
-### 40. Try to login with deactivated user (should fail with 401)
+### 42. Try to login with deactivated user (should fail with 401)
 POST {{api}}/Auth/login
 Content-Type: application/json
 
@@ -340,7 +348,7 @@ Content-Type: application/json
   "password": "DeactivatedPass123!"
 }
 
-### 41. Try to access endpoint after user deactivation (should fail with appropriate error)
+### 43. Try to access endpoint after user deactivation (should fail with appropriate error)
 GET {{api}}/users/{{userId}}
 Authorization: Bearer {{deactivatedUserToken}}
 
