@@ -106,6 +106,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // Add security middleware
+app.UseQueryProtection(); // Add query protection before other middleware
 app.UseSecurityMiddleware();
 app.UseSecurityHeaders();
 

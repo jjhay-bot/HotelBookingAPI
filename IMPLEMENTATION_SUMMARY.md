@@ -194,6 +194,13 @@ Models/
 
 This Hotel Booking API now provides enterprise-grade security suitable for production deployment, with comprehensive role-based authorization, robust input protection, and extensive testing coverage.
 
+### **🛡️ Infinite Query Protection**
+- **Multi-layer rate limiting** - Burst (10s), per-minute, and daily limits
+- **Per-endpoint configuration** - Stricter limits for auth, generous for browsing
+- **Smart user tracking** - JWT user ID + IP address fallback
+- **Graceful error responses** - 429 status with retry instructions
+- **React-friendly headers** - Rate limit info for client optimization
+
 ### **🧹 Automatic Memory Management**
 - **Auto cleanup every 30 seconds** - Removes expired cache entries
 - **Memory pressure detection** - Automatic cleanup when system RAM gets low

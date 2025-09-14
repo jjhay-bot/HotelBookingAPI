@@ -1,0 +1,125 @@
+### Test Query Protection - Prevent Infinite React Queries
+
+# 🚨 WARNING: These tests will trigger rate limits!
+# Run these to see protection in action
+
+### 1. Normal request (should work)
+GET https://localhost:7070/api/room
+Authorization: Bearer YOUR_JWT_TOKEN
+
+###
+
+### 2. Burst test - Make 10 rapid requests (will be blocked after 6th)
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+# 🚫 These should return 429 Too Many Requests
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+GET https://localhost:7070/api/room
+
+###
+
+### 3. Login endpoint burst test (stricter limits)
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "wrong"
+}
+
+###
+
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test", 
+  "password": "wrong"
+}
+
+###
+
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "wrong"
+}
+
+###
+
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "wrong"
+}
+
+###
+
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "wrong"
+}
+
+###
+
+# 🚫 This should be blocked (6th request in 10 seconds)
+POST https://localhost:7070/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "wrong"
+}
+
+###
+
+### 4. Check rate limit headers in response
+# Look for these headers in successful responses:
+# X-RateLimit-Remaining: Number of requests left
+# X-RateLimit-Burst-Remaining: Burst requests left  
+# X-RateLimit-Daily-Remaining: Daily requests left
+# X-RateLimit-Reset: When limit resets
+
+### 5. Test after waiting (should work again)
+# Wait 10 seconds then try:
+GET https://localhost:7070/api/room
