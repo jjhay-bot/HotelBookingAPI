@@ -51,9 +51,10 @@ builder.Services.AddControllers()
         };
     });
 
-builder.Services.AddSingleton<RoomService>();
-builder.Services.AddSingleton<UserService>();
-builder.Services.AddSingleton<JwtTokenService>();
+// Register services with proper lifetime
+builder.Services.AddScoped<RoomService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<JwtTokenService>();
 
 // Add Memory Cache for server-side caching
 builder.Services.AddMemoryCache();
@@ -61,21 +62,47 @@ builder.Services.AddMemoryCache();
 // Add security services
 builder.Services.AddSecurityServices(builder.Configuration);
 
-// Configure and register MongoDbSettings
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDbSettings")
-);
+// Configure and register MongoDbSettings with environment variable fallback
+builder.Services.Configure<MongoDbSettings>(options =>
+{
+    var configSection = builder.Configuration.GetSection("MongoDbSettings");
+    configSection.Bind(options);
+    
+    // Override with environment variables if available
+    options.ConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING") ?? options.ConnectionString;
+    options.DatabaseName = Environment.GetEnvironmentVariable("DATABASE_NAME") ?? options.DatabaseName ?? "HotelBookingDb";
+    options.RoomsCollectionName = options.RoomsCollectionName ?? "Rooms";
+    options.UsersCollectionName = options.UsersCollectionName ?? "Users";
+});
 
 builder.Services.AddSingleton<IMongoClient>(serviceProvider => 
 {
     var settings = serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value;
-    return new MongoClient(settings.ConnectionString);
+    
+    // Get connection string from environment if not in config
+    var connectionString = settings.ConnectionString ?? Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
+    
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("MongoDB connection string is not configured. Please set MONGODB_CONNECTION_STRING environment variable or MongoDbSettings:ConnectionString in appsettings.json");
+    }
+    
+    return new MongoClient(connectionString);
 });
 
 
-// Add JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt")!;
-var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
+// Add JWT Authentication with error handling
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSettings["Key"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
+var jwtIssuer = jwtSettings["Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HotelBookingAPI";
+var jwtAudience = jwtSettings["Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HotelBookingAPIUsers";
+
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new InvalidOperationException("JWT Key is not configured. Please set JWT_SECRET environment variable or Jwt:Key in appsettings.json");
+}
+
+var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -91,9 +118,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"]!, // Added !
+        ValidIssuer = jwtIssuer,
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"]!, // Added !
+        ValidAudience = jwtAudience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero // No leeway for token expiration
     };
@@ -105,6 +132,25 @@ builder.Services.AddAuthorization(); // Add authorization services
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Add some startup logging to help debug deployment issues
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Application starting up...");
+logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+logger.LogInformation("Port: {Port}", port);
+
+try
+{
+    // Test MongoDB connection at startup
+    var mongoClient = app.Services.GetRequiredService<IMongoClient>();
+    var database = mongoClient.GetDatabase("admin");
+    await database.RunCommandAsync<MongoDB.Bson.BsonDocument>(new MongoDB.Bson.BsonDocument("ping", 1));
+    logger.LogInformation("MongoDB connection successful");
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "MongoDB connection failed");
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
